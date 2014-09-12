@@ -147,10 +147,11 @@ void Bank::rewind_all()
 // returns true if a read was successfuly read
 //         false if end of file
 // adapted from kseq.h by Heng Li (https://github.com/attractivechaos/klib)
-bool  Bank::get_next_seq_from_file(char **nseq, char **cheader, int *len, int *hlen, int file_id)
+bool  Bank::get_next_seq_from_file(char **nseq, char **cheader, int *len, int *hlen, int file_id, kmer_colour *col)
 {
     signed char c;
     buffered_file_t *bf = buffered_file[file_id];
+    col= &(bf->file_colour);
     if (bf->last_char == 0)
     {
         while ( (c = buffered_getc(bf)) != -1 && c != '>' && c != '@'); // go to next header
@@ -211,13 +212,13 @@ bool  Bank::get_next_seq_from_file(char **nseq, char **cheader, int *len, int *h
 // wrapper
 bool  Bank::get_next_seq_from_file(char **nseq, int *len, int file_id)
 {
-    return get_next_seq_from_file(nseq,NULL,len,NULL,file_id);
+    return get_next_seq_from_file(nseq,NULL,len,NULL,file_id, NULL);
 }
 
 // wrapper
-bool Bank::get_next_seq(char **nseq, char **cheader, int *len, int *hlen)
+bool Bank::get_next_seq(char **nseq, char **cheader, int *len, int *hlen, kmer_colour *col)
 {
-    bool success = get_next_seq_from_file(nseq,cheader,len,hlen,index_file);
+    bool success = get_next_seq_from_file(nseq,cheader,len,hlen,index_file, col);
     if (success)
         return true;
     
@@ -227,7 +228,7 @@ bool Bank::get_next_seq(char **nseq, char **cheader, int *len, int *hlen)
         close_stream(index_file);
         index_file++;
         open_stream(index_file);
-        return get_next_seq(nseq,cheader, len,hlen);
+        return get_next_seq(nseq,cheader, len,hlen, col);
     }
     return false;
 }
@@ -235,7 +236,13 @@ bool Bank::get_next_seq(char **nseq, char **cheader, int *len, int *hlen)
 // wrapper
 bool Bank::get_next_seq(char **nseq, int *len)
 {
-  return get_next_seq(nseq,NULL,len,NULL);
+  return get_next_seq(nseq,NULL,len,NULL, NULL);
+}
+
+
+bool Bank::get_next_seq_colour(char **nseq, int *len, kmer_colour *col)
+{
+  return get_next_seq(nseq,NULL,len,NULL, col);
 }
 
 
@@ -289,7 +296,7 @@ void Bank::init(char **fname, int nb_files_)
             else // no more filenames
                 break;
         }
-        printf("Reading %i read files\n",ii);
+        printf("Reading %i read files (first 2 are..):\t%s\t%s\n",ii, nfname[0], nfname[1]);
         if(ii==MAX_NB_FILES)
             printf("Warning! using max number of read files (%i)\n",ii);
 
@@ -323,6 +330,8 @@ void Bank::init(char **fname, int nb_files_)
         buffered_file[i] = (buffered_file_t *)calloc(1, sizeof(buffered_file_t));
         buffered_file[i]->buffer = (unsigned char*) malloc(BUFFER_SIZE); 
         buffered_file[i]->fname = strdup(fname[i]);
+        buffered_file[i]->file_colour = i;
+        printf("Name:%s Colour:%i\n", buffered_file[i]->fname, buffered_file[i]->file_colour);
     }
 
     rewind_all(); // initialize the get_next_seq iterator to the first file
@@ -448,7 +457,7 @@ int Bank::estimate_max_readlen()
     while ( index_file < nb_files )
     {
         int NbRead = 0;
-        while (get_next_seq_from_file(&rseq,NULL,&readlen,NULL,index_file))
+        while (get_next_seq_from_file(&rseq,NULL,&readlen,NULL,index_file, NULL))
         {
             max_readlen = max(readlen, max_readlen);
             if (NbRead++ == 10000)
@@ -737,7 +746,7 @@ void BinaryReads::close()
     //flush buffer
     if(cpt_buffer)
     {
-        //printf("close :write block %i \n",cpt_buffer);
+        printf("close :write block %i \n",cpt_buffer);
         block_size = cpt_buffer;
         fwrite(&block_size, sizeof(unsigned int), 1, binary_read_file); // block header
         if (!fwrite(buffer, 1, cpt_buffer, binary_read_file))
@@ -779,7 +788,7 @@ void BinaryReads::write_read(char * read, int readlen)
     char * pt = read;
     unsigned int block_size = 0;
     
- //   printf("write read %i / %i   readlen %i \n",cpt_buffer,read_write_buffer_size,readlen);
+//    printf("write read %s %i / %i   readlen %i \n",pt , cpt_buffer,read_write_buffer_size,readlen);
     //todo : also flush to disk  sometimes (ie if very large buffer, to create smaller blocks..)
     if((cpt_buffer && cpt_buffer >= (read_write_buffer_size-readlen)) || cpt_buffer > 10000000 )  ////not enough space to store next read   true space is 4 + readlen/4 + rem
         //flush buffer to disk
@@ -803,19 +812,21 @@ void BinaryReads::write_read(char * read, int readlen)
         read_write_buffer_size = 2*readlen; // too large but ok
         buffer =  (unsigned char *) realloc(buffer,sizeof(unsigned char) * read_write_buffer_size);
     }
-    
+
     memcpy(buffer+cpt_buffer,&readlen,sizeof(int));
     cpt_buffer+= sizeof(int);
     
     //fwrite( (void *) &readlen, sizeof(int), 1, binary_read_file);
-
+//    printf("Buffer=%s=cpt=%d=\n", pt, cpt_buffer);
     
     for (tai=readlen; tai>=4  ; tai-=4)
     {
         rbin = code4NT(pt);
       //  fwrite((void *) &rbin, 1,1,binary_read_file );
         buffer[cpt_buffer]=rbin; cpt_buffer++;
+//        printf("B:%d%c%c%c%c:%u ", tai,pt[0], pt[1], pt[2], pt[3], rbin);
         pt +=4;
+
     }
     
     //then remaining
@@ -844,6 +855,22 @@ void  compute_kmer_table_from_one_seq(int readlen, char * seq, kmer_type * kmer_
     }
 }
 
+void  compute_kmer_table_from_one_seq_colour(int readlen, char * seq, kmer_type * kmer_table, kmer_colour readColour, kmer_colour *kmer_table_colour )  //,char * pkmer_table //pour remplissage table loc
+{
+    kmer_type graine = codeSeed(seq);
+    kmer_type graine_revcomp = revcomp(graine);
+    kmer_table[0] = min(graine,graine_revcomp);
+    kmer_table_colour[0] = readColour;
+    seq++;
+    for (int i=1; i<readlen-sizeKmer+1; i++)
+    {
+        graine =   (graine * 4 + NT2int(seq[sizeKmer-1])) & kmerMask   ;
+        graine_revcomp =  ((graine_revcomp >> 2) +  ( ((kmer_type) comp_NT[NT2int(seq[sizeKmer-1])]) <<  (2*(sizeKmer-1))  )  ) & kmerMask ;
+        kmer_table[i] = min(graine,graine_revcomp);
+        kmer_table_colour[i] = readColour;
+        seq++;
+    }
+}
 
 
 

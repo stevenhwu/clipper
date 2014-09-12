@@ -28,7 +28,7 @@ using namespace std;
 extern struct timeval tim;
 #define STARTWALL(TT) \
 gettimeofday(&tim, NULL);\
-double wdebut  ## TT =tim.tv_sec +(tim.tv_usec/1000000.0); 
+double wdebut  ## TT =tim.tv_sec +(tim.tv_usec/1000000.0);
 
 
 #define STOPWALL(TT,MESSAGE)				\

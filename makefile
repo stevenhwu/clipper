@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS = -O4 -D_FILE_OFFSET_BITS=64 # needed to handle files > 2 GB on 32 bits systems
+CFLAGS = -O4 -D_FILE_OFFSET_BITS=64 -std=c++11 # needed to handle files > 2 GB on 32 bits systems
 SRC=Pool.cpp Bank.cpp Bloom.cpp Hash16.cpp LargeInt.cpp Kmer.cpp Terminator.cpp Traversal.cpp LinearCounter.cpp Set.cpp Utils.cpp SortingCount.cpp Debloom.cpp OAHash.cpp
 EXEC=minia
 OBJ= $(SRC:.cpp=.o)
@@ -61,6 +61,9 @@ all: $(EXEC)
 
 minia: clean $(OBJ) Minia.cpp
 	$(CC) -o $@ $(OBJ) Minia.cpp $(CFLAGS) -lz
+
+inc: $(OBJ) Minia.cpp
+	$(CC) -o minia $(OBJ) Minia.cpp $(CFLAGS) -lz
 
 %.o: %.cpp %.h
 	$(CC) -o $@ -c $< $(CFLAGS)

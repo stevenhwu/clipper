@@ -17,8 +17,21 @@ kmer_type kmerMask;
 int NT2int(char nt)
 {
     int i;
-    i = nt;
+//    i = nt;
+//    printf("%d:",i);
+//    i=i>>1;
+//    printf("%d:",i);
+//    i=i&3;
+//    printf("%d:",i);
+    i=nt;
     i = (i>>1)&3; // that's quite clever, guillaume.
+//    A:0 C:1 T:2 G:3
+//71:35:3:G=3	1000111
+//84:42:2:T=2	1010100
+//67:33:1:C=1	1000011
+//65:32:0:A=0	1000001
+
+//    printf("%c=%d ",nt,i);
     return i;
 }
 

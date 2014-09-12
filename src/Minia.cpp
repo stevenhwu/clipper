@@ -285,40 +285,39 @@ int main(int argc, char *argv[])
     fprintf (stderr,"taille cell %u \n", sizeof(cell<kmer_type>));
 
     STARTWALL(0);
-
+printf("argv[i]%s", argv[1]);
     Bank *Reads = new Bank(argv[1]);
-    
+
     // counter kmers, write solid kmers to disk
     if (!START_FROM_SOLID_KMERS)
     {
-        int verbose = 0;
+        int verbose = 2;
         bool write_count = false;
         bool skip_binary_conversion = false;
-
+printf("==========START_FROM_SOLID_KMERS\n");
         sorting_count(Reads,prefix,max_memory,max_disk_space,write_count,verbose, skip_binary_conversion);
     }
-
+//exit(-9);
     // debloom, write false positives to disk, insert them into false_positives
     if (! LOAD_FALSE_POSITIVE_KMERS)
-    {
+    {printf("==========LOAD_FALSE_+ve_KMERS");
         debloom(order, max_memory);
     }
     
     bloo1 = bloom_create_bloo1((BloomCpt *)NULL, false);
 
-    if (! NO_FALSE_POSITIVES_AT_ALL)
-    {
-        // load false positives from disk into false_positives
-        if (!FOUR_BLOOM_VERSION) 
-            false_positives = load_false_positives();
-	else
-	    false_positives = load_false_positives_cascading4();
-    }
-    else
-    {
-        // titus mode: no FP's
-        false_positives = dummy_false_positives();
-    }
+	if (!NO_FALSE_POSITIVES_AT_ALL) {
+		printf("===============NO_FALSE_+ve_KMERS");
+		// load false positives from disk into false_positives
+		if (!FOUR_BLOOM_VERSION)
+			false_positives = load_false_positives();
+		else
+			false_positives = load_false_positives_cascading4();
+	} else {
+		printf("=============else NO_FALSE_+ve_KMERS: titus mode");
+		// titus mode: no FP's
+		false_positives = dummy_false_positives();
+	}
 
     //  return 1;
     assemble(); 

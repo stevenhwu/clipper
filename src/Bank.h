@@ -34,6 +34,7 @@ typedef struct
     bool eof;
     char last_char;
     char *fname;
+    kmer_colour file_colour; // use one colour per file as default
 } buffered_file_t;
 
 typedef struct 
@@ -52,11 +53,12 @@ class Bank{
         void init(char **fname, int nb_files_);
         void close();
 
+        bool get_next_seq_colour(char **nseq, int *len, kmer_colour *col);
         bool get_next_seq(char **nseq, int *len);
         bool get_next_seq_from_file(char **nseq, int *len, int file_id);
     
-        bool get_next_seq_from_file(char **nseq, char **cheader, int *len, int *hlen, int file_id);
-        bool get_next_seq(char **nseq, char **cheader, int *len, int *hlen);
+        bool get_next_seq_from_file(char **nseq, char **cheader, int *len, int *hlen, int file_id, kmer_colour *col);
+        bool get_next_seq(char **nseq, char **cheader, int *len, int *hlen, kmer_colour *col);
 
         void open_stream(int i); // internal functions
         void close_stream(int i);
@@ -188,5 +190,6 @@ class KmersBuffer
 };
 
 void  compute_kmer_table_from_one_seq(int readlen, char * seq, kmer_type * kmer_table )  ;
+void  compute_kmer_table_from_one_seq_colour(int readlen, char * seq, kmer_type * kmer_table, kmer_colour readColour, kmer_colour *kmer_table_colour );
 
 #endif

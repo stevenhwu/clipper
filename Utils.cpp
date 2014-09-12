@@ -27,6 +27,7 @@ char *return_file_name(const char *suffix)
         sprintf(fileName,"%s.%s",prefix,suffix);
     else
         sprintf(fileName,"%s",suffix);
+
     return fileName;
 }
 
@@ -620,7 +621,7 @@ void Progress::inc(uint64_t ntasks_done)
             int min_r  = (int)(rem / 60) ;
             rem -= min_r*60;
             
-            fprintf(stderr,"%c%-5.3g  %%     elapsed: %6i min %-4.0f  sec      estimated remaining: %6i min %-4.0f  sec ",13,100*(double)done/todo,min_e,elapsed,min_r,rem);
+//            fprintf(stderr,"%c%-5.3g  %%     elapsed: %6i min %-4.0f  sec      estimated remaining: %6i min %-4.0f  sec ",13,100*(double)done/todo,min_e,elapsed,min_r,rem);
         }
         else
         {

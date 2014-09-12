@@ -2,7 +2,7 @@
 #define Kmer64_h
 
 #include <stdint.h>
-
+#include <cstdint>
 #ifdef _largeint
 #include "LargeInt.h"
 typedef LargeInt<KMER_PRECISION> kmer_type;
@@ -17,9 +17,13 @@ typedef uint64_t kmer_type;
 #endif
 #endif
 
+typedef unsigned char kmer_colour;
+
 extern int sizeKmer;
 extern kmer_type kmerMask;
 extern uint64_t nsolids;
+
+
 
 int NT2int(char nt);
 int revcomp_int(int nt_int);

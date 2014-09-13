@@ -127,8 +127,10 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
     uint64_t total_IO =   volume * 2LL * 1024LL*1024LL   ;// in bytes  +   nb_passes * ( volume / (sizeof(kmer_type)*4) )    ; // in bytes
     uint64_t temp_IO = 0;
     //if (nb_passes==1) use_compressed_reads=false;
-    BinaryBankConcurrent * redundant_partitions_file[nb_partitions]; 
+    BinaryBankConcurrent * redundant_partitions_file[nb_partitions];
+    BinaryBankConcurrent * redundant_partitions_colour_file[nb_partitions];
     char redundant_filename[nb_partitions][256];
+    char redundant_colour_filename[nb_partitions][256];
     kmer_type kmer;
     int max_read_length = KMERSBUFFER_MAX_READLEN;
     kmer_type * kmer_table_seq = (kmer_type * ) malloc(sizeof(kmer_type)*max_read_length); ;
@@ -141,7 +143,7 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
     mkdir(temp_dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
     BinaryBankConcurrent * SolidKmers = new BinaryBankConcurrent(return_file_name(solid_kmers_file),sizeof(kmer),true,nb_threads);
-
+    BinaryBankConcurrent * SolidKmersColour = new BinaryBankConcurrent(return_file_name(solid_kmers_colour_file),sizeof(kmer_colour),true,nb_threads);
     if (write_count)
     {
         // write k-mer nbits as the first 4 bytes; and actual k-mer size as the next 4 bits
@@ -198,6 +200,7 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
         while(1)
         {
             if(! Sequences->get_next_seq_colour(&rseq, &readlen, &readColour)) break; // read  original fasta file
+
             //TODO FIXME How to add colour? maybe one binaryReads per colour?
             if(readlen > max_read_length) // realloc kmer_table_seq if needed
             {
@@ -277,8 +280,10 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
 
         for (uint32_t p=0;p<nb_partitions;p++)
         {
-            sprintf(redundant_filename[p],`"%s/partition%d.redundant_kmers",temp_dir,p);
+            sprintf(redundant_filename[p],"%s/partition%d.redundant_kmers",temp_dir,p);
+            sprintf(redundant_colour_filename[p],"%s/partition%d.redundant_kmers_colour",temp_dir,p);
             redundant_partitions_file[p] =  new BinaryBankConcurrent (redundant_filename[p],sizeof(kmer_type),true, nb_threads);
+            redundant_partitions_colour_file[p] =  new BinaryBankConcurrent (redundant_colour_filename[p],sizeof(kmer_colour),true, nb_threads);
             distinct_kmers_per_partition[p]=0;
         }
 
@@ -368,11 +373,13 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
                 for (i=0; i<nbkmers; i++)
                 {
                     kmer_type lkmer;
+                    kmer_colour lkmer_colour;
 
                     // kmer = extractKmerFromRead(rseq,i,&graine,&graine_revcomp);
 //                    printf("A1:%d_A2:%d\n", &kmer_table[i], &kmer_table_seq[i]); TRUE, why declare kmer_table??
 //                    lkmer = kmer_table_seq[i];//kmer_table[i];
                     lkmer = kmer_table[i];
+                    lkmer_colour = kmer_table_col[i];
 
                     // some hashing to uniformize repartition
                     kmer_type kmer_hash = lkmer ^ (lkmer >> 14);
@@ -398,8 +405,9 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
 #endif
 
                     nbkmers_written++;
-
+//                    printf("%u\n",lkmer_colour);
                     redundant_partitions_file[p]->write_element_buffered(&lkmer,tid); // save this kmer to the right partition file
+                    redundant_partitions_colour_file[p]->write_element_buffered(&lkmer_colour,tid); // save this kmer to the right partition file
                     // total_kmers_per_partition[p]++; // guillaume probably commented it because updating this variable would require synchronization
 
                 }
@@ -462,6 +470,8 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
             {
                 redundant_partitions_file[p]->close();
                 redundant_partitions_file[p]->open(false);
+                redundant_partitions_colour_file[p]->close();
+				redundant_partitions_colour_file[p]->open(false);
             }
 
 
@@ -488,6 +498,7 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
         for (int p=0;p<nb_partitions;p++)
         {
             kmer_type lkmer;
+            kmer_colour lkmer_colour;
             
             bool use_hashing_for_this_partition = use_hashing;
 //            printf("max mem %i MB  ,   parti size %i MB\n",max_memory,(redundant_partitions_file[p]->nb_elements()*sizeof(kmer_type))/1024LL/1024LL);
@@ -512,7 +523,8 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
                 
                 while (redundant_partitions_file[p]->read_element_buffered (&lkmer))
                 {
-                    hash.increment(lkmer);
+                	redundant_partitions_colour_file[p]-> read_element_buffered(&lkmer_colour) ;
+                    hash.increment(lkmer, lkmer_colour);
                     nkmers_read++;
 #if SINGLE_BAR
                     if(verbose==0 && nkmers_read==10000)

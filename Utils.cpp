@@ -17,6 +17,8 @@ const char *breakpoints_file_name = (char *)"breakpoints";
 
 const char *assoc_kmer_file = (char *)"paired_kmer";
 
+const char *solid_kmers_colour_file = (char *)"solid_kmers_colour_binary";
+
 
 // prefix-based output files naming 
 char prefix[1024];

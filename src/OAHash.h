@@ -28,6 +28,7 @@ protected:
     {
         key_type key;
         uint32_t value; 
+        uint32_t colour;
     };
    
 
@@ -63,6 +64,7 @@ public:
     element_pair * find_slot(key_type key);
     void insert(key_type graine, int value);
     void increment(key_type graine);
+    void increment(key_type graine, unsigned char colour);
     bool get( key_type graine, int * val);
     bool has_key(key_type graine);
     void printstat();

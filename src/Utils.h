@@ -54,6 +54,7 @@ extern const char *histo_file_name ;//= (char *)"histo";
 extern const char *breakpoints_file_name; // = (char *)"breakpoints";
 extern const char *assoc_kmer_file ;
 
+extern const char *solid_kmers_colour_file;// = (char *)"solid_kmers_colour_binary";
 
 char *return_file_name(const char *suffix);
 

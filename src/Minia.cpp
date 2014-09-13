@@ -297,7 +297,7 @@ printf("argv[i]%s", argv[1]);
 printf("==========START_FROM_SOLID_KMERS\n");
         sorting_count(Reads,prefix,max_memory,max_disk_space,write_count,verbose, skip_binary_conversion);
     }
-//exit(-9);
+exit(-9);
     // debloom, write false positives to disk, insert them into false_positives
     if (! LOAD_FALSE_POSITIVE_KMERS)
     {printf("==========LOAD_FALSE_+ve_KMERS");

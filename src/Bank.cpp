@@ -151,7 +151,10 @@ bool  Bank::get_next_seq_from_file(char **nseq, char **cheader, int *len, int *h
 {
     signed char c;
     buffered_file_t *bf = buffered_file[file_id];
-    col= &(bf->file_colour);
+	if (col != NULL) {
+		*col= (bf->file_colour);
+	}
+
     if (bf->last_char == 0)
     {
         while ( (c = buffered_getc(bf)) != -1 && c != '>' && c != '@'); // go to next header
@@ -205,7 +208,6 @@ bool  Bank::get_next_seq_from_file(char **nseq, char **cheader, int *len, int *h
         *cheader = header->string;
         *hlen = header->length;
     }
-
     return true;
 }
 
@@ -218,6 +220,7 @@ bool  Bank::get_next_seq_from_file(char **nseq, int *len, int file_id)
 // wrapper
 bool Bank::get_next_seq(char **nseq, char **cheader, int *len, int *hlen, kmer_colour *col)
 {
+//	printf("NULL:%s\n", *col);
     bool success = get_next_seq_from_file(nseq,cheader,len,hlen,index_file, col);
     if (success)
         return true;
@@ -236,13 +239,14 @@ bool Bank::get_next_seq(char **nseq, char **cheader, int *len, int *hlen, kmer_c
 // wrapper
 bool Bank::get_next_seq(char **nseq, int *len)
 {
-  return get_next_seq(nseq,NULL,len,NULL, NULL);
+  return get_next_seq(nseq,NULL,len,NULL, NULL); //&t | nullptr TODO: which is the best??
 }
 
 
 bool Bank::get_next_seq_colour(char **nseq, int *len, kmer_colour *col)
 {
-  return get_next_seq(nseq,NULL,len,NULL, col);
+	bool nextSeq = get_next_seq(nseq, NULL, len, NULL, col);
+	return nextSeq;
 }
 
 
@@ -870,6 +874,7 @@ void  compute_kmer_table_from_one_seq_colour(int readlen, char * seq, kmer_type 
         kmer_table_colour[i] = readColour;
         seq++;
     }
+
 }
 
 

@@ -18,6 +18,7 @@ typedef uint64_t kmer_type;
 #endif
 
 typedef unsigned char kmer_colour;
+//typedef int kmer_colour;
 
 extern int sizeKmer;
 extern kmer_type kmerMask;

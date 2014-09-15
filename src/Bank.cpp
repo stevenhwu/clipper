@@ -147,7 +147,7 @@ void Bank::rewind_all()
 // returns true if a read was successfuly read
 //         false if end of file
 // adapted from kseq.h by Heng Li (https://github.com/attractivechaos/klib)
-bool  Bank::get_next_seq_from_file(char **nseq, char **cheader, int *len, int *hlen, int file_id, kmer_colour *col)
+bool  Bank::get_next_seq_from_file(char **nseq, char **cheader, int *len, int *hlen, int file_id, KmerColour *col)
 {
     signed char c;
     buffered_file_t *bf = buffered_file[file_id];
@@ -218,7 +218,7 @@ bool  Bank::get_next_seq_from_file(char **nseq, int *len, int file_id)
 }
 
 // wrapper
-bool Bank::get_next_seq(char **nseq, char **cheader, int *len, int *hlen, kmer_colour *col)
+bool Bank::get_next_seq(char **nseq, char **cheader, int *len, int *hlen, KmerColour *col)
 {
 //	printf("NULL:%s\n", *col);
     bool success = get_next_seq_from_file(nseq,cheader,len,hlen,index_file, col);
@@ -243,7 +243,7 @@ bool Bank::get_next_seq(char **nseq, int *len)
 }
 
 
-bool Bank::get_next_seq_colour(char **nseq, int *len, kmer_colour *col)
+bool Bank::get_next_seq_colour(char **nseq, int *len, KmerColour *col)
 {
 	bool nextSeq = get_next_seq(nseq, NULL, len, NULL, col);
 	return nextSeq;
@@ -654,6 +654,7 @@ void BinaryBank::write( void *element, int size)
 
 size_t BinaryBank::read( void *element, int size)
 {
+
     return fread(element, size,1, binary_read_file);
 }
 
@@ -698,6 +699,16 @@ off_t BinaryBank::nb_elements()
   return fsize(filename)/sizeElement;
 }
 
+
+size_t BinaryBank::ReadKmer( void *element)
+{
+    return fread(element, kSizeOfKmerType, 1, binary_read_file);
+}
+
+size_t BinaryBank::ReadColour( void *element)
+{
+    return fread(element, kSizeOfKmerColour, 1, binary_read_file);
+}
 
 BinaryBank::~BinaryBank()
 {
@@ -859,7 +870,7 @@ void  compute_kmer_table_from_one_seq(int readlen, char * seq, kmer_type * kmer_
     }
 }
 
-void  compute_kmer_table_from_one_seq_colour(int readlen, char * seq, kmer_type * kmer_table, kmer_colour readColour, kmer_colour *kmer_table_colour )  //,char * pkmer_table //pour remplissage table loc
+void  compute_kmer_table_from_one_seq_colour(int readlen, char * seq, kmer_type * kmer_table, KmerColour readColour, KmerColour *kmer_table_colour )  //,char * pkmer_table //pour remplissage table loc
 {
     kmer_type graine = codeSeed(seq);
 //    printf("SEQ:%s\n",seq);

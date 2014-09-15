@@ -139,6 +139,20 @@ void OAHash::insert(key_type graine, int value)
 
 }
 
+//if graine already here, overwrite old value
+void OAHash::insert(key_type graine, KmerColour colour)
+{
+    element_pair *element = find_slot(graine);
+    if (!is_occupied(element))
+    {
+        element->key = graine;
+        nb_inserted_keys++;
+    }
+    element->value = 1;
+    element->colour = colour;
+
+}
+
 // increment the value of a graine
 void OAHash::increment(key_type graine)
 {
@@ -149,10 +163,10 @@ void OAHash::increment(key_type graine)
         nb_inserted_keys++;
     }
     element->value = element->value + 1;
-    printf("Hash::%u\t%u\n",element->value, element->colour);
+//    printf("Hash::%u\t%u\n",element->value, element->colour);
 }
 
-void OAHash::increment(key_type graine, unsigned char colour) {
+void OAHash::increment(key_type graine, KmerColour colour) {
 
 	element_pair *element = find_slot(graine);
 	if (!is_occupied(element))

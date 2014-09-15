@@ -17,13 +17,17 @@ typedef uint64_t kmer_type;
 #endif
 #endif
 
-typedef unsigned char kmer_colour;
+typedef unsigned char KmerColour;
 //typedef int kmer_colour;
+
+
+const size_t kSizeOfKmerType = sizeof(kmer_type);
+const size_t kSizeOfKmerColour = sizeof(KmerColour);
+
 
 extern int sizeKmer;
 extern kmer_type kmerMask;
 extern uint64_t nsolids;
-
 
 
 int NT2int(char nt);

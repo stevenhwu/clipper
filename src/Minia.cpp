@@ -13,10 +13,6 @@
 #define NNKS 4 // default minimal abundance for solidity
 #define MIN_CONTIG_SIZE (2*sizeKmer+1)
 
-int max_memory; // the most memory one should alloc at any time, in MB
-
-int order = 0; // deblooming order; 0 = debloom everything; 1 = don't debloom 1-node tips (experimental, untested, shouldn't work);// (made extern int in Traversal.h)
-  
 #include "Bank.h"
 #include "Hash16.h"
 #include "Set.h"
@@ -30,6 +26,9 @@ int order = 0; // deblooming order; 0 = debloom everything; 1 = don't debloom 1-
 #include "Traversal.h"
 #include "rvalues.h" // for 4bloom
 
+
+int max_memory; // the most memory one should alloc at any time, in MB
+int order = 0; // deblooming order; 0 = debloom everything; 1 = don't debloom 1-node tips (experimental, untested, shouldn't work);// (made extern int in Traversal.h)
 
 int64_t genome_size;
 Bloom * bloo1;
@@ -53,8 +52,8 @@ inline void assemble()
 
     char *left_traversal  = (char *) malloc(maxlen*sizeof(char));
     char *right_traversal = (char *) malloc(maxlen*sizeof(char));
-    kmer_colour *left_colour_traversal  = (kmer_colour *) malloc(maxlen*sizeof(kmer_colour));
-    kmer_colour *right_colour_traversal = (kmer_colour *) malloc(maxlen*sizeof(kmer_colour));
+    KmerColour *left_colour_traversal  = (KmerColour *) malloc(maxlen*sizeof(KmerColour));
+    KmerColour *right_colour_traversal = (KmerColour *) malloc(maxlen*sizeof(KmerColour));
 
     char *contig          = (char *) malloc(2*(maxlen+sizeKmer)*sizeof(char));
     kmer_type kmer;
@@ -68,7 +67,7 @@ inline void assemble()
     FILE * file_assembly = fopen(return_file_name(assembly_file),"w+");
     FILE * file_colour_assembly = fopen(return_file_name(assembly_colour_file),"w+");
     BinaryBank *SolidKmers = new BinaryBank(return_file_name(solid_kmers_file),sizeof(kmer_type),0);
-    BinaryBank *SolidKmersColour = new BinaryBank(return_file_name(solid_kmers_colour_file),sizeof(kmer_type)+sizeof(kmer_colour),0);
+    BinaryBank *solid_kmers_colour = new BinaryBank(return_file_name(solid_kmers_colour_file), kSizeOfKmerType+kSizeOfKmerColour, 0);
 
 
     STARTWALL(assembly);
@@ -106,7 +105,7 @@ inline void assemble()
     traversal->set_maxlen(maxlen);
     traversal->set_max_depth(500);
     traversal->set_max_breadth(20);
-    traversal->setSolidKmersColour(SolidKmersColour);
+    traversal->SetSolidKmersColour(solid_kmers_colour, max_memory);
 
     while (terminator->next(&kmer))
     {
@@ -114,7 +113,7 @@ inline void assemble()
 		// everything will be marked during the traversal()'s
 		kmer_type starting_kmer;
 		code2seq(kmer,kmer_seq); // convert
-		printf("Kmer:%li\t%s\n",kmer, kmer_seq);// Varified, kmer's matched seq from the original creation
+//		printf("Kmer:%li\t%s\n",kmer, kmer_seq);// Varified! kmer's matched seq from the original creation
 		while (traversal->find_starting_kmer(kmer,starting_kmer))
 //		while (traversal->find_starting_kmer_inside_simple_path(kmer,starting_kmer))
 		{
@@ -176,7 +175,7 @@ exit(-9);
     free(right_traversal);
     free(contig);
     SolidKmers->close();
-    SolidKmersColour->close();
+    solid_kmers_colour->close();
 }
 
 int main(int argc, char *argv[])
@@ -308,8 +307,9 @@ printf("argv[i]%s", argv[1]);
         bool write_count = false;
         bool skip_binary_conversion = false;
 printf("==========START_FROM_SOLID_KMERS\n");
-        sorting_count(Reads,prefix,max_memory,max_disk_space,write_count,verbose, skip_binary_conversion);
-    }
+		sorting_count(Reads, prefix, max_memory, max_disk_space, write_count,
+				verbose, skip_binary_conversion);
+	}
 
     // debloom, write false positives to disk, insert them into false_positives
     LOAD_FALSE_POSITIVE_KMERS = 1; //TODO: change back to 0 later
@@ -339,7 +339,7 @@ printf("==========START_FROM_SOLID_KMERS\n");
 	}
 
     //  return 1;
-    assemble(); 
+    assemble();
 
     STOPWALL(0,"Total");
 

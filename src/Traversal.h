@@ -11,6 +11,7 @@
 #include "Bloom.h"
 #include "Set.h"
 #include "Utils.h" // for needleman_wunch
+#include "OAHash.h"
 
 using namespace std;
 
@@ -45,10 +46,10 @@ protected:
     int max_depth;
     int max_breadth;
 
-    BinaryBank *SolidKmersColour;
+    BinaryBank *solid_kmers_colour;
 
     virtual char avance(kmer_type graine, int current_strand, bool first_extension, char * newNT, kmer_type previous_kmer) = 0;
-    virtual char avance_colour(kmer_type graine, int current_strand, bool first_extension, char * newNT, kmer_colour *newColour, kmer_type previous_kmer) = 0;
+    virtual char avance_colour(kmer_type graine, int current_strand, bool first_extension, char * newNT, KmerColour *newColour, kmer_type previous_kmer) = 0;
 
     void mark_extensions(set<kmer_type> *extensions_to_mark);
 
@@ -60,14 +61,14 @@ public:
     void set_max_depth(int);
     void set_max_breadth(int);
     int traverse(kmer_type starting_kmer, char* resulting_sequence, int current_strand, kmer_type previous_kmer = 0);
-    int traverse_colour(kmer_type starting_kmer, char* resulting_sequence, kmer_colour *resulting_colour, int current_strand, kmer_type previous_kmer = 0);
+    int traverse_colour(kmer_type starting_kmer, char* resulting_sequence, KmerColour *resulting_colour, int current_strand, kmer_type previous_kmer = 0);
 
     // n-order extension function, to ignore tips
     int extensions(kmer_type kmer, int strand, int &nt);
     
     // useful atomic avance functions
     int simple_paths_avance(kmer_type graine, int current_strand, bool first_extension, char * newNT);
-    int simple_paths_avance_colour(kmer_type graine, int current_strand, bool first_extension, char * newNT, kmer_colour * newColour);
+    int simple_paths_avance_colour(kmer_type graine, int current_strand, bool first_extension, char * newNT, KmerColour * newColour);
 
     char random_unmarked_avance(kmer_type graine, int current_strand, bool first_extension, char * newNT);
 	
@@ -78,8 +79,8 @@ public:
 
     vector<pair<int, int> > bubbles_positions; // record the start/end positions of traversed bubbles (only from the latest traverse() call)
 
-    kmer_colour getColour(kmer_type);
-    void setSolidKmersColour(BinaryBank *SolidKmersColour);
+    KmerColour getColour(kmer_type);
+    void SetSolidKmersColour(BinaryBank *SolidKmersColour, int max_memory);
 
 };
 
@@ -129,7 +130,7 @@ class MonumentTraversal: public Traversal
     //int max_length_deadend = 150; // replaced by sizeKmer+1
     static const int consensuses_identity = 90; // traversing bubble if paths are all pair-wise identical by > 90%
     char avance(kmer_type graine, int current_strand, bool first_extension, char * newNT, kmer_type previous_kmer);
-    char avance_colour(kmer_type graine, int current_strand, bool first_extension, char * newNT, kmer_colour *newColour, kmer_type previous_kmer);
+    char avance_colour(kmer_type graine, int current_strand, bool first_extension, char * newNT, KmerColour *newColour, kmer_type previous_kmer);
 
     set<string> all_consensuses_between(kmer_type start_kmer, int start_strand, kmer_type end_kmer, int end_strand, int traversal_depth, set<kmer_type> used_kmers, string current_consensus, bool &success);
     set<string> all_consensuses_between(kmer_type start_kmer, int start_strand, kmer_type end_kmer, int end_node, int traversal_depth, bool &success);

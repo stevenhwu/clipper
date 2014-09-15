@@ -146,6 +146,7 @@ int first_nucleotide(kmer_type kmer)
     ttmath::UInt<KMER_PRECISION> t = kmer&3;
     t.ToInt(result);
 #else
+
     result = kmer&3;
 #endif
 #endif
@@ -162,13 +163,16 @@ int code2seq (kmer_type code, char *seq, int sizeKmer, kmer_type kmerMask)
     int i;
     kmer_type temp = code;
     char bin2NT[4] = {'A','C','T','G'};
-
+//    printf("code:%li\n",code);
     for (i=sizeKmer-1; i>=0; i--)
-    {
+    {//Some conversion convert kmer_type back to nuc
+
         seq[i]=bin2NT[first_nucleotide(temp&3)];
+//        printf("%c\t%li\t%li\t%li\n", seq[i], temp, temp&3 , temp>>2);
         temp = temp>>2;
     }
-    //printf("sizeKmer = %d\n", sizeKmer);
+//    printf("sizeKmer = %d\t%li\t%i\n", sizeKmer, code, temp);
+//    exit(-1);
     seq[sizeKmer]='\0';
     return sizeKmer;
 }

@@ -162,7 +162,7 @@ void OAHash::increment(key_type graine, unsigned char colour) {
 	}
 	element->value = element->value + 1;
 	element-> colour = element-> colour  | 1 << colour;
-	printf("Hash::%u\t%u\n",element->value, element->colour);
+//	printf("Hash::%u\t%u\n",element->value, element->colour);
 
 //	exit(0);
 }

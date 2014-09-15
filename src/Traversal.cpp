@@ -5,9 +5,12 @@
 using namespace std;
 
 Traversal::~Traversal()
-{
-}
+{}
 
+void Traversal::setSolidKmersColour(BinaryBank *bank){
+	SolidKmersColour = bank;
+	//TODO parse into hash again?? not very smart way to do this
+}
 
 void Traversal::set_maxlen(int given_maxlen)
 {
@@ -459,6 +462,8 @@ int Traversal::traverse(kmer_type starting_kmer, char* resulting_sequence, int s
         for (int cur_nt = 0; cur_nt < nnt; cur_nt++)
         {
             resulting_sequence[len_extension]=newNT[cur_nt];
+            //TODO: add resulting colour, from avance
+//            resulting_colour[len_extension]=newColour[cur_nt];
             len_extension++;
             previous_kmer = current_kmer;
 
@@ -490,6 +495,72 @@ int Traversal::traverse(kmer_type starting_kmer, char* resulting_sequence, int s
     return len_extension;
 }
 
+
+// main traversal function, which calls avance()
+// important:
+// for MonumentTraversal, either "previous_kmer" is unspecified and then "starting_kmer" is required to be non-branching,
+// or, if starting_kmer is branching, please specify the "previous_kmer" parameter, corresponding to a left k-mer that will
+// be ignored during in-branching checks
+int Traversal::traverse_colour(kmer_type starting_kmer, char* resulting_sequence, kmer_colour *resulting_colour, int starting_strand, kmer_type previous_kmer)
+{
+    kmer_type current_kmer = starting_kmer;
+    int current_strand = starting_strand; // 0 = forward, 1 = reverse;
+    int len_extension = 0;
+    char newNT[max_depth+1];
+    kmer_colour newColour[max_depth+1];
+    int nnt = 0;
+    bool looping = false;
+
+    int bubble_start, bubble_end;
+    bubbles_positions.clear();
+
+    //printf(" traversing %llX strand:%d\n",starting_kmer,current_strand);
+
+//    while( (nnt=avance(current_kmer, current_strand, len_extension == 0, newNT, previous_kmer)))
+    while( (nnt=avance_colour(current_kmer, current_strand, len_extension == 0, newNT, newColour, previous_kmer)))
+    {
+        if (nnt < 0) // found branching or marked kmers
+            break;
+
+        if (nnt > 1) // it's a bubble for sure
+            bubble_start = len_extension;
+
+        // keep re-walking the nucleotides we just discovered, to append to consensus and mark kmers as we go
+        for (int cur_nt = 0; cur_nt < nnt; cur_nt++)
+        {
+            resulting_sequence[len_extension]=newNT[cur_nt];
+            //TODO: add resulting colour, from avance
+            resulting_colour[len_extension]=newColour[cur_nt];
+            len_extension++;
+            previous_kmer = current_kmer;
+
+            current_kmer = next_kmer(current_kmer,NT2int(newNT[cur_nt]),&current_strand);
+#ifndef DONTMARK
+            terminator->mark(current_kmer); // mark kmer as used in the assembly
+#endif
+
+            if (current_kmer == starting_kmer) // perfectly circular regions with no large branching can happen (rarely)
+                looping = true;
+        }
+
+        if (nnt > 1)
+        {
+            bubble_end = len_extension;
+            bubbles_positions.push_back(std::make_pair(bubble_start,bubble_end));
+        }
+
+        if (looping)
+            break;
+
+        if (len_extension > maxlen)
+        {
+            //    fprintf(stderr,"max contig len reached \n");
+            break;
+        }
+    }
+    resulting_sequence[len_extension]='\0';
+    return len_extension;
+}
 
 // ----------------
 // random branching traversal
@@ -555,6 +626,46 @@ int Traversal::simple_paths_avance(kmer_type kmer, int strand, bool first_extens
 
     return 0;
 }
+
+int Traversal::simple_paths_avance_colour(kmer_type kmer, int strand, bool first_extension, char * newNT, kmer_colour * newColour)
+{
+    char bin2NT[4] = {'A','C','T','G'};
+
+    int nb_extensions = 0, in_branching_degree = 0;
+    int good_nt;
+
+    // return the number of possible forward extensions
+    nb_extensions = extensions(kmer, strand, good_nt);
+
+    if (nb_extensions == 1)
+    {
+        // if the next kmer has in-branching, don't extend the current kmer
+        int second_strand = strand;
+        kmer_type second_kmer = next_kmer(kmer,good_nt,&second_strand);
+        kmer_colour second_kmer_colour = getColour(second_kmer);//TODO: need colour file, where should I store it?
+        int osef;
+        in_branching_degree = extensions(second_kmer,1-second_strand,osef);
+        if (in_branching_degree > 1)
+            return -2;
+
+        *newNT = bin2NT[good_nt];
+        *newColour = second_kmer_colour;
+        return 1;
+    }
+
+    if (nb_extensions > 1) // if this kmer has out-branching, don't extend it
+        return -1;
+
+    return 0;
+}
+
+kmer_colour Traversal::getColour(kmer_type){
+
+	kmer_colour colour = 1;
+//TODO Match kmer_type to kmer_colour using SolidKmersColour!!
+	return colour;
+}
+
 
 char SimplePathsTraversal::avance(kmer_type kmer, int current_strand, bool first_extension, char * newNT, kmer_type previous_kmer)
 {
@@ -892,7 +1003,8 @@ bool MonumentTraversal::all_consensuses_almost_identical(set<string> consensuses
 
 // similar to Monument's extension_graph.py:explore_branching
 // return true if the branching can be traversed, and mark all involved nodes
-bool MonumentTraversal::explore_branching(kmer_type start_kmer, int start_strand, char *consensus, int &consensus_length, kmer_type previous_kmer, set<kmer_type> *all_involved_extensions)
+bool MonumentTraversal::explore_branching(kmer_type start_kmer, int start_strand,
+		char *consensus, int &consensus_length, kmer_type previous_kmer, set<kmer_type> *all_involved_extensions)
 {
     kmer_type end_kmer;
     int end_strand;
@@ -959,3 +1071,29 @@ char MonumentTraversal::avance(kmer_type kmer, int current_strand, bool first_ex
 
     return newNT_length;
 }
+
+char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand, bool first_extension, char * newNT, kmer_colour * newColour, kmer_type previous_kmer)
+{
+
+    // if we're on a simple path, just traverse it
+    int is_simple_path = simple_paths_avance_colour(kmer, current_strand, first_extension, newNT, newColour);
+    if (is_simple_path > 0)
+        return 1;
+
+    // the following function does:
+    // * a bfs from the starting kmer, stopping when:
+    //      - breadth > max_breadth
+    //      or
+    //      - depth > max_depth
+    // * check if there a single end point
+    // * computing all possible paths between start and end
+    // * returns one flattened consensus sequence
+    int newNT_length;
+    //TODO: Hard to implement this one
+    bool success = explore_branching(kmer, current_strand, newNT, newNT_length, previous_kmer);
+    if (!success)
+        return 0;
+
+    return newNT_length;
+}
+

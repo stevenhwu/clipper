@@ -862,16 +862,19 @@ void  compute_kmer_table_from_one_seq(int readlen, char * seq, kmer_type * kmer_
 void  compute_kmer_table_from_one_seq_colour(int readlen, char * seq, kmer_type * kmer_table, kmer_colour readColour, kmer_colour *kmer_table_colour )  //,char * pkmer_table //pour remplissage table loc
 {
     kmer_type graine = codeSeed(seq);
+//    printf("SEQ:%s\n",seq);
     kmer_type graine_revcomp = revcomp(graine);
     kmer_table[0] = min(graine,graine_revcomp);
     kmer_table_colour[0] = readColour;
     seq++;
+//    printf("kmer:%lu\n",kmer_table[0]);
     for (int i=1; i<readlen-sizeKmer+1; i++)
     {
         graine =   (graine * 4 + NT2int(seq[sizeKmer-1])) & kmerMask   ;
         graine_revcomp =  ((graine_revcomp >> 2) +  ( ((kmer_type) comp_NT[NT2int(seq[sizeKmer-1])]) <<  (2*(sizeKmer-1))  )  ) & kmerMask ;
         kmer_table[i] = min(graine,graine_revcomp);
         kmer_table_colour[i] = readColour;
+//        printf("kmer:%lu\n",kmer_table[i]);
         seq++;
     }
 

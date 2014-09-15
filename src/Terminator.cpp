@@ -264,6 +264,7 @@ BranchingTerminator::BranchingTerminator(BinaryBank *given_SolidKmers, uint64_t 
     uint64_t previous_estimated_nb_branching_kmers, estimated_nb_branching_kmers;
     while (SolidKmers->read_element(&kmer))
     {
+//    	printf("ReadKmer: %li\n", kmer);
         if (is_branching(kmer))
             nb_branching_kmers++;
 

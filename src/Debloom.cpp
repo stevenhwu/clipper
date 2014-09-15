@@ -109,7 +109,7 @@ int debloom(int order, int max_memory)
                     // what would have been needed if i decided to enable order>0 (but actually this won't happen): 
                     //  - better estimate of structure size in the presence of order>0 deblooming  
                     if (order == 1)  // this case just detects tips
-                    {
+                    {printf("ORDER==1");
                         bool is_linked = false;
                         for(int tip_nt=0; tip_nt<4; tip_nt++) 
                         {
@@ -126,7 +126,7 @@ int debloom(int order, int max_memory)
                     }
     
                     if (order > 1) // general case. should work for order = 1, but i coded an optimized version above
-                    { 
+                    { printf("ORDER>1");
                         Frontline frontline( new_graine, current_strand, bloo1, NULL, NULL, NULL);
                         while (frontline.depth < order)
                         {

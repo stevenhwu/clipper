@@ -10,6 +10,7 @@ const char *solid_kmers_file = (char *)"solid_kmers_binary";
 const char *false_positive_kmers_file = (char *)"false_positive_kmers";
 const char *bloom_file = (char *)"bloom_data";
 const char *assembly_file = (char *)"contigs.fa";
+
 const char *branching_kmers_file = (char *)"branching_kmers"; // (only useful for multiple assemblies with same bloom&debloom structure (ie debugging))
 const char *binary_read_file = (char *)"reads_binary";
 const char *histo_file_name = (char *)"histo";
@@ -18,7 +19,7 @@ const char *breakpoints_file_name = (char *)"breakpoints";
 const char *assoc_kmer_file = (char *)"paired_kmer";
 
 const char *solid_kmers_colour_file = (char *)"solid_kmers_colour_binary";
-
+const char *assembly_colour_file = (char *)"contigs_colour.fa";
 
 // prefix-based output files naming 
 char prefix[1024];

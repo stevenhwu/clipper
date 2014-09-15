@@ -53,6 +53,9 @@ inline void assemble()
 
     char *left_traversal  = (char *) malloc(maxlen*sizeof(char));
     char *right_traversal = (char *) malloc(maxlen*sizeof(char));
+    kmer_colour *left_colour_traversal  = (kmer_colour *) malloc(maxlen*sizeof(kmer_colour));
+    kmer_colour *right_colour_traversal = (kmer_colour *) malloc(maxlen*sizeof(kmer_colour));
+
     char *contig          = (char *) malloc(2*(maxlen+sizeKmer)*sizeof(char));
     kmer_type kmer;
 
@@ -63,8 +66,10 @@ inline void assemble()
     int64_t NbBranchingKmer=0;
     char kmer_seq[sizeKmer+1];
     FILE * file_assembly = fopen(return_file_name(assembly_file),"w+");
-
+    FILE * file_colour_assembly = fopen(return_file_name(assembly_colour_file),"w+");
     BinaryBank *SolidKmers = new BinaryBank(return_file_name(solid_kmers_file),sizeof(kmer_type),0);
+    BinaryBank *SolidKmersColour = new BinaryBank(return_file_name(solid_kmers_colour_file),sizeof(kmer_type)+sizeof(kmer_colour),0);
+
 
     STARTWALL(assembly);
 
@@ -75,7 +80,7 @@ inline void assemble()
     BranchingTerminator *terminator;
 
     if (LOAD_BRANCHING_KMERS)
-    {
+    {printf("LOA:%s\n",LOAD_BRANCHING_KMERS);
         BinaryBank *BranchingKmers = new BinaryBank(return_file_name(branching_kmers_file),sizeof(kmer_type),false);
         terminator = new BranchingTerminator(BranchingKmers,SolidKmers, bloo1,false_positives);
         BranchingKmers->close();
@@ -84,11 +89,12 @@ inline void assemble()
         terminator = new BranchingTerminator(SolidKmers,genome_size, bloo1,false_positives);
 
     if (DUMP_BRANCHING_KMERS)
-    {
+    {printf("DUMP:%s\n",DUMP_BRANCHING_KMERS);
         BinaryBank *BranchingKmers = new BinaryBank(return_file_name(branching_kmers_file),sizeof(kmer_type),true);
         terminator->dump_branching_kmers(BranchingKmers);
         BranchingKmers->close();
     }
+    printf("Check boolean:%i\t%i\n", LOAD_BRANCHING_KMERS, DUMP_BRANCHING_KMERS);
 
 #ifdef UNITIG
     SimplePathsTraversal *traversal = new SimplePathsTraversal(bloo1,false_positives,terminator);
@@ -100,12 +106,15 @@ inline void assemble()
     traversal->set_maxlen(maxlen);
     traversal->set_max_depth(500);
     traversal->set_max_breadth(20);
-    
+    traversal->setSolidKmersColour(SolidKmersColour);
+
     while (terminator->next(&kmer))
     {
         // keep looping while a starting kmer is available from this kmer
 		// everything will be marked during the traversal()'s
 		kmer_type starting_kmer;
+		code2seq(kmer,kmer_seq); // convert
+		printf("Kmer:%li\t%s\n",kmer, kmer_seq);// Varified, kmer's matched seq from the original creation
 		while (traversal->find_starting_kmer(kmer,starting_kmer))
 //		while (traversal->find_starting_kmer_inside_simple_path(kmer,starting_kmer))
 		{
@@ -118,11 +127,14 @@ inline void assemble()
             }
 
             // right extension
-            len_right = traversal->traverse(starting_kmer,right_traversal,0);
+//            len_right = traversal->traverse(starting_kmer, right_traversal, 0);
+			len_right = traversal->traverse_colour(starting_kmer, right_traversal, right_colour_traversal, 0);
             mlenright= max(len_right,mlenright);
 
             // left extension, is equivalent to right extension of the revcomp
-            len_left = traversal->traverse(starting_kmer,left_traversal,1);
+//            len_left = traversal->traverse(starting_kmer, left_traversal, 1);
+            len_left = traversal->traverse_colour(starting_kmer, left_traversal,
+            										left_colour_traversal, 1);
             mlenleft= max(len_left,mlenleft);
 
             // form the contig
@@ -130,11 +142,11 @@ inline void assemble()
             strcpy(contig,left_traversal); // contig = revcomp(left_traversal)
 	        strcat(contig,kmer_seq);//               + starting_kmer
             strcat(contig,right_traversal);//           + right_traversal
-
+//TODO: How to represent multiple colour (number of colour) in contig
             contig_len=len_left+len_right+sizeKmer;
 
             // save the contig
-            if(contig_len >= MIN_CONTIG_SIZE)
+            if(contig_len >= MIN_CONTIG_SIZE)//TODO: add colour info here
             {
                 max_contig_len = max(max_contig_len,contig_len);
                 fprintf(file_assembly,">%lli__len__%lli \n",nbContig,contig_len);
@@ -145,7 +157,7 @@ inline void assemble()
             if (assemble_only_one_region != NULL)
                 break;
         }
-    
+
         NbBranchingKmer++;
         if ((NbBranchingKmer%300)==0) fprintf (stderr,"%cLooping through branching kmer n° %lld / %lld  total nt   %lli   ",13,NbBranchingKmer,terminator->nb_branching_kmers,totalnt );
 
@@ -154,7 +166,7 @@ inline void assemble()
 
     }
     fclose(file_assembly);
-
+exit(-9);
     fprintf (stderr,"\n Total nt assembled  %lli  nbContig %lli\n",totalnt,nbContig);
     fprintf (stderr,"\n Max contig len  %lli (debug: max len left %lli, max len right %lli)\n",max_contig_len,mlenleft,mlenright);
     
@@ -164,6 +176,7 @@ inline void assemble()
     free(right_traversal);
     free(contig);
     SolidKmers->close();
+    SolidKmersColour->close();
 }
 
 int main(int argc, char *argv[])
@@ -297,24 +310,30 @@ printf("argv[i]%s", argv[1]);
 printf("==========START_FROM_SOLID_KMERS\n");
         sorting_count(Reads,prefix,max_memory,max_disk_space,write_count,verbose, skip_binary_conversion);
     }
-exit(-9);
+
     // debloom, write false positives to disk, insert them into false_positives
+    LOAD_FALSE_POSITIVE_KMERS = 1; //TODO: change back to 0 later
     if (! LOAD_FALSE_POSITIVE_KMERS)
-    {printf("==========LOAD_FALSE_+ve_KMERS");
+    {printf("==========LOAD_FALSE_+ve_KMERS\n");//Don't think we need to add colour to this section, double check LATER
         debloom(order, max_memory);
     }
-    
+
     bloo1 = bloom_create_bloo1((BloomCpt *)NULL, false);
 
-	if (!NO_FALSE_POSITIVES_AT_ALL) {
-		printf("===============NO_FALSE_+ve_KMERS");
+    NO_FALSE_POSITIVES_AT_ALL = 1;
+	if (!NO_FALSE_POSITIVES_AT_ALL) { //TODO: deal with this later, use dummy_false_positivies()
+		printf("===============NO_FALSE_+ve_KMERS\n");
 		// load false positives from disk into false_positives
-		if (!FOUR_BLOOM_VERSION)
+		if (!FOUR_BLOOM_VERSION){
+			printf("===============NoFourBloom\n");
 			false_positives = load_false_positives();
-		else
+		}
+		else{
+			printf("===============FourBloomVersion\n");
 			false_positives = load_false_positives_cascading4();
+		}
 	} else {
-		printf("=============else NO_FALSE_+ve_KMERS: titus mode");
+		printf("=============else NO_FALSE_+ve_KMERS: titus mode\n");
 		// titus mode: no FP's
 		false_positives = dummy_false_positives();
 	}

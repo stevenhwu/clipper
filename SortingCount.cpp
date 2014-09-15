@@ -27,7 +27,7 @@ bool output_histo;
 //           - the very first four bytes of the result file are the kmer length
 void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_space, bool write_count, int verbose, bool skip_binary_conversion)
 {
-
+int first =1;
     // create a temp dir from the prefix
     char temp_dir[1024];
     sprintf(temp_dir,"%s_temp",prefix);
@@ -143,7 +143,8 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
     mkdir(temp_dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
     BinaryBankConcurrent * SolidKmers = new BinaryBankConcurrent(return_file_name(solid_kmers_file),sizeof(kmer),true,nb_threads);
-    BinaryBankConcurrent * SolidKmersColour = new BinaryBankConcurrent(return_file_name(solid_kmers_colour_file),sizeof(kmer_colour),true,nb_threads);
+    BinaryBankConcurrent * SolidKmersColour = new BinaryBankConcurrent(return_file_name(solid_kmers_colour_file),sizeof(kmer_colour)+sizeof(kmer_type),true,nb_threads);
+    printf("CHeck size:%i\t%i\n", sizeof(kmer), sizeof(kmer_type));
     if (write_count)
     {
         // write k-mer nbits as the first 4 bytes; and actual k-mer size as the next 4 bits
@@ -152,7 +153,6 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
         SolidKmers->write_buffered(&sizeKmer, 4,0);
         SolidKmers->flush(0);
     }
-
     int64_t estimated_NbReads = Sequences->estimate_nb_reads();
     char * rseq;
     int readlen;
@@ -370,6 +370,7 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
 
                 nbkmers_written= 0;
                 //compute the kmers stored in the buffer kmer_table
+
                 for (i=0; i<nbkmers; i++)
                 {
                     kmer_type lkmer;
@@ -393,7 +394,6 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
                     // check if this kmer should be included in the current pass
                     if ((kmer_hash % nb_passes  ) != current_pass) 
                         continue;
-
                     kmer_type reduced_kmer = kmer_hash / nb_passes;
 
                     int p;// compute in which partition this kmer falls into
@@ -494,6 +494,7 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
         //omp_set_numthreads(2);  //num_threads(2) //if(!output_histo) num_threads(nb_threads)
 #pragma omp parallel for private (p)  num_threads(nb_threads)
 #endif        
+
         // load, sort each partition to output solid kmers
         for (int p=0;p<nb_partitions;p++)
         {
@@ -514,7 +515,7 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
 #if OMP
             tid = omp_get_thread_num();
 #endif
-            
+first = 1;
             if (use_hashing_for_this_partition)
             {
                 // hash partition and save to solid file
@@ -525,7 +526,11 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
                 {
                 	redundant_partitions_colour_file[p]-> read_element_buffered(&lkmer_colour) ;
                     hash.increment(lkmer, lkmer_colour);
-                    nkmers_read++;
+if(first){
+//	printf("%li\n", lkmer);
+//	first = 0;
+}
+                    nkmers_read++;// Why not inside SINGLE_BAR??
 #if SINGLE_BAR
                     if(verbose==0 && nkmers_read==10000)
                     {
@@ -540,14 +545,15 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
                 
                 //single bar
                 
-                
+first = 1;
                 if (verbose >= 2)
                     printf("Pass %d/%d partition %d/%d hash load factor: %0.3f\n",current_pass+1,nb_passes,p+1,nb_partitions,hash.load_factor());
-                
+                int counter = 0;
                 hash.start_iterator();
                 while (hash.next_iterator())
                 {
                     uint_abundance_t abundance = hash.iterator->value;
+//                    printf("Hash:key:%ui Value:%li Colour:%li\n",hash.iterator->key, hash.iterator->value, hash.iterator->colour);
                     if(output_histo)
                     {
                         uint_abundance_t saturated_abundance;
@@ -555,24 +561,34 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
 #if OMP
                         histo_count_omp[tid][saturated_abundance]++;
 #else
-//                        printf("histo_count 0 1  2 %i %i %i \n",histo_count[0],histo_count[1],histo_count[2]);
+                        printf("histo_count 0 1  2 %i %i %i \n",histo_count[0],histo_count[1],histo_count[2]);
                         
                         histo_count[saturated_abundance]++;
 #endif
                     }
+
                     if (abundance >= nks && abundance <= max_couv)
                     {
+                    	counter++;
+//if(first){
+//	first = 0;
+//	printf("fkey: %li\n", hash.iterator->key);
+//}
                         SolidKmers->write_element_buffered(&(hash.iterator->key),tid);
-                        
+//                        Save key only, no need for value/colour
+                        SolidKmersColour-> write_buffered(&(hash.iterator->key),sizeof(kmer_type), tid);
+                        SolidKmersColour-> write_buffered(&(hash.iterator->colour),sizeof(kmer_colour), tid);
                         NbSolid_omp[tid]++;
                         if (write_count)
                             SolidKmers->write_buffered(&abundance, sizeof(abundance),tid, false);
                         
                     }
                     distinct_kmers_per_partition[p]++;
-                }
+                }printf("Total:%i\n\n", counter);
             }
-            
+            //In test dataset,
+//            4729+4653+4642+4592 = 18616 (unique)
+//            1252+1192+1165+1164 = 4773 (>min)
             else
             {//START non hash version
                 // sort partition and save to solid file
@@ -660,7 +676,7 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
                     
                 }
                 
-            }//END non-hash verison
+            }//END non-hash verison, else{**}
             
             
             if (verbose >= 1)
@@ -679,6 +695,7 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
             
             
             redundant_partitions_file[p]->close();
+			redundant_partitions_colour_file[p]->close();
 //            remove(redundant_filename[p]);
             
         } // end for partitions

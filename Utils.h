@@ -55,6 +55,7 @@ extern const char *breakpoints_file_name; // = (char *)"breakpoints";
 extern const char *assoc_kmer_file ;
 
 extern const char *solid_kmers_colour_file;// = (char *)"solid_kmers_colour_binary";
+extern const char *assembly_colour_file;// = (char *)"contigs_colour.fa";
 
 char *return_file_name(const char *suffix);
 

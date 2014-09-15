@@ -7,9 +7,46 @@ using namespace std;
 Traversal::~Traversal()
 {}
 
-void Traversal::setSolidKmersColour(BinaryBank *bank){
-	SolidKmersColour = bank;
+void Traversal::SetSolidKmersColour(BinaryBank *bank, int max_memory){
+	solid_kmers_colour = bank;
 	//TODO parse into hash again?? not very smart way to do this
+
+	solid_kmers_colour->rewind_all();
+	OAHash hash(max_memory * 1024LL * 1024LL);
+	uint64_t nkmers_read = 0;
+	kmer_type lkmer;
+	KmerColour lkmer_colour;
+
+	while (solid_kmers_colour-> ReadKmer(&lkmer)) {
+		solid_kmers_colour-> ReadColour(&lkmer_colour);
+//		printf("K:%lu\t%hu\n", lkmer, lkmer_colour);
+		hash.insert(lkmer, lkmer_colour);
+        nkmers_read++;
+	}
+	hash.start_iterator();
+	while (hash.next_iterator())
+	{
+		printf("K:%lu\t%hu\n",hash.iterator->key, hash.iterator->colour);
+
+	}
+	off_t nbElements = solid_kmers_colour->nb_elements();
+
+	printf("READ hashfile:%i\t%zi\t%lu\t%ld\t%i\n",nkmers_read, nbElements, nbElements, nbElements, solid_kmers_colour->get_sizeElement());
+	hash.printstat();
+//	}
+//	if(first){
+//	//	printf("%li\n", lkmer);
+//	//	first = 0;
+//	}
+//
+//
+//	                //single bar
+//
+//	first = 1;
+//	                if (verbose >= 2)
+//	                    printf("Pass %d/%d partition %d/%d hash load factor: %0.3f\n",current_pass+1,nb_passes,p+1,nb_partitions,hash.load_factor());
+//	                int counter = 0;
+//
 }
 
 void Traversal::set_maxlen(int given_maxlen)
@@ -501,13 +538,13 @@ int Traversal::traverse(kmer_type starting_kmer, char* resulting_sequence, int s
 // for MonumentTraversal, either "previous_kmer" is unspecified and then "starting_kmer" is required to be non-branching,
 // or, if starting_kmer is branching, please specify the "previous_kmer" parameter, corresponding to a left k-mer that will
 // be ignored during in-branching checks
-int Traversal::traverse_colour(kmer_type starting_kmer, char* resulting_sequence, kmer_colour *resulting_colour, int starting_strand, kmer_type previous_kmer)
+int Traversal::traverse_colour(kmer_type starting_kmer, char* resulting_sequence, KmerColour *resulting_colour, int starting_strand, kmer_type previous_kmer)
 {
     kmer_type current_kmer = starting_kmer;
     int current_strand = starting_strand; // 0 = forward, 1 = reverse;
     int len_extension = 0;
     char newNT[max_depth+1];
-    kmer_colour newColour[max_depth+1];
+    KmerColour newColour[max_depth+1];
     int nnt = 0;
     bool looping = false;
 
@@ -627,7 +664,7 @@ int Traversal::simple_paths_avance(kmer_type kmer, int strand, bool first_extens
     return 0;
 }
 
-int Traversal::simple_paths_avance_colour(kmer_type kmer, int strand, bool first_extension, char * newNT, kmer_colour * newColour)
+int Traversal::simple_paths_avance_colour(kmer_type kmer, int strand, bool first_extension, char * newNT, KmerColour * newColour)
 {
     char bin2NT[4] = {'A','C','T','G'};
 
@@ -642,7 +679,7 @@ int Traversal::simple_paths_avance_colour(kmer_type kmer, int strand, bool first
         // if the next kmer has in-branching, don't extend the current kmer
         int second_strand = strand;
         kmer_type second_kmer = next_kmer(kmer,good_nt,&second_strand);
-        kmer_colour second_kmer_colour = getColour(second_kmer);//TODO: need colour file, where should I store it?
+        KmerColour second_kmer_colour = getColour(second_kmer);//TODO: need colour file, where should I store it?
         int osef;
         in_branching_degree = extensions(second_kmer,1-second_strand,osef);
         if (in_branching_degree > 1)
@@ -659,10 +696,10 @@ int Traversal::simple_paths_avance_colour(kmer_type kmer, int strand, bool first
     return 0;
 }
 
-kmer_colour Traversal::getColour(kmer_type){
+KmerColour Traversal::getColour(kmer_type){
 
-	kmer_colour colour = 1;
-//TODO Match kmer_type to kmer_colour using SolidKmersColour!!
+	KmerColour colour = 1;
+//TODO Match kmer_type to kmer_colour using solid_kmers_colour!!
 	return colour;
 }
 
@@ -1072,7 +1109,7 @@ char MonumentTraversal::avance(kmer_type kmer, int current_strand, bool first_ex
     return newNT_length;
 }
 
-char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand, bool first_extension, char * newNT, kmer_colour * newColour, kmer_type previous_kmer)
+char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand, bool first_extension, char * newNT, KmerColour * newColour, kmer_type previous_kmer)
 {
 
     // if we're on a simple path, just traverse it

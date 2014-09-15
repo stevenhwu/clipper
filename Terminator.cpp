@@ -279,6 +279,7 @@ BranchingTerminator::BranchingTerminator(BinaryBank *given_SolidKmers, uint64_t 
         if (nb_kmers++ == nb_extrapolation)
             break;
     }
+    printf("solidKmer:%lu\n",nb_kmers);
     estimated_nb_branching_kmers = (uint64_t)((1.0*nb_branching_kmers)/nb_kmers * genome_size); // final estimation
     int estimated_NBITS_TERMINATOR = max( (int)ceilf(log2f(estimated_nb_branching_kmers)), 1);
     fprintf (stderr,"\n");
@@ -303,7 +304,11 @@ BranchingTerminator::BranchingTerminator(BinaryBank *given_SolidKmers, uint64_t 
         nb_solid_kmers++;
         if ((nb_branching_kmers%500)==0) fprintf (stderr,"%cIndexing branching kmers %lld / ~%lld",13,nb_branching_kmers,estimated_nb_branching_kmers);
     }
+    off_t nbElements = SolidKmers->nb_elements();
 
+
+
+    printf("solidKmer take2:%lu\t%zd\t%d\n",nb_solid_kmers, nbElements, SolidKmers->get_sizeElement());
     if (nb_branching_kmers == 0)
         printf("\n**** Warning\n\nNo branching kmers were found in this dataset (it is either empty or a tiny circular genome) - Minia will not assemble anything.\n\n****\n\n");
 

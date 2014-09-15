@@ -4,6 +4,8 @@
 #include <inttypes.h>
 #include <stdint.h>
 
+#include "Kmer.h"
+
 #ifdef _largeint
 #include "LargeInt.h"
 typedef LargeInt<KMER_PRECISION> key_type;
@@ -28,7 +30,7 @@ protected:
     {
         key_type key;
         uint32_t value; 
-        uint32_t colour;
+        KmerColour colour;
     };
    
 
@@ -63,8 +65,9 @@ public:
     ~OAHash();
     element_pair * find_slot(key_type key);
     void insert(key_type graine, int value);
+    void insert(key_type graine, KmerColour colour);
     void increment(key_type graine);
-    void increment(key_type graine, unsigned char colour);
+    void increment(key_type graine, KmerColour colour);
     bool get( key_type graine, int * val);
     bool has_key(key_type graine);
     void printstat();

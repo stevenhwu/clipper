@@ -556,7 +556,7 @@ first = 1;
                 while (hash.next_iterator())
                 {
                     uint_abundance_t abundance = hash.iterator->value;
-//                    printf("Hash:key:%ui Value:%li Colour:%li\n",hash.iterator->key, hash.iterator->value, hash.iterator->colour);
+//                    printf("Hash:key:%lu\tValue:%i Colour:%u\n",hash.iterator->key, hash.iterator->value, hash.iterator->colour);
                     if(output_histo)
                     {
                         uint_abundance_t saturated_abundance;
@@ -577,7 +577,7 @@ first = 1;
 //	first = 0;
 //	printf("fkey: %li\n", hash.iterator->key);
 //}
-                		printf("K:%lu\t%hu\n",hash.iterator->key, hash.iterator->colour);
+//                		printf("K:%lu\t%hu\n",hash.iterator->key, hash.iterator->colour);
 
                         SolidKmers->write_element_buffered(&(hash.iterator->key),tid);
 //                        Save key only, no need for value/colour

@@ -69,6 +69,7 @@ public:
     void increment(key_type graine);
     void increment(key_type graine, KmerColour colour);
     bool get( key_type graine, int * val);
+    bool get_colour( key_type graine, KmerColour *colour);
     bool has_key(key_type graine);
     void printstat();
     uint64_t memory_usage();

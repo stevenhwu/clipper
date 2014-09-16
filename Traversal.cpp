@@ -2,6 +2,8 @@
 #include <algorithm> // for max()
 #include "Traversal.h"
 
+#include "Kmer.h" //TODO remove later, debugging only
+
 using namespace std;
 
 Traversal::~Traversal()
@@ -12,27 +14,26 @@ void Traversal::SetSolidKmersColour(BinaryBank *bank, int max_memory){
 	//TODO parse into hash again?? not very smart way to do this
 
 	solid_kmers_colour->rewind_all();
-	OAHash hash(max_memory * 1024LL * 1024LL);
+
+	hash = new OAHash(max_memory * 1024LL * 1024LL);
 	uint64_t nkmers_read = 0;
 	kmer_type lkmer;
 	KmerColour lkmer_colour;
-
 	while (solid_kmers_colour-> ReadKmer(&lkmer)) {
 		solid_kmers_colour-> ReadColour(&lkmer_colour);
 //		printf("K:%lu\t%hu\n", lkmer, lkmer_colour);
-		hash.insert(lkmer, lkmer_colour);
+		hash->insert(lkmer, lkmer_colour);
         nkmers_read++;
 	}
-	hash.start_iterator();
-	while (hash.next_iterator())
-	{
-		printf("K:%lu\t%hu\n",hash.iterator->key, hash.iterator->colour);
-
-	}
-	off_t nbElements = solid_kmers_colour->nb_elements();
-
-	printf("READ hashfile:%i\t%zi\t%lu\t%ld\t%i\n",nkmers_read, nbElements, nbElements, nbElements, solid_kmers_colour->get_sizeElement());
-	hash.printstat();
+//	hash.start_iterator();
+//	while (hash.next_iterator())
+//	{
+//		printf("K:%lu\t%hu\n",hash.iterator->key, hash.iterator->colour);
+//	}
+//	off_t nbElements = solid_kmers_colour->nb_elements();
+//
+	printf("Load kmer_colour file:%i\n",nkmers_read);
+//	hash.printstat();
 //	}
 //	if(first){
 //	//	printf("%li\n", lkmer);
@@ -91,6 +92,11 @@ int traversal_extensions(kmer_type kmer, int strand, int &nt, Bloom *bloom_solid
         {
             int current_strand = strand;
             kmer_type current_kmer = next_kmer(kmer,test_nt,&current_strand);
+//			if (kmer == 2239396308425812948) {
+//				printf("%ld\t%d\t%ld\t%d\t%d\n", kmer, test_nt, current_kmer,
+//						bloom_solid_kmers->contains(current_kmer),
+//						!debloom->contains(current_kmer));
+//			}
 
             if (bloom_solid_kmers->contains(current_kmer) && !debloom->contains(current_kmer))
             {
@@ -544,7 +550,8 @@ int Traversal::traverse_colour(kmer_type starting_kmer, char* resulting_sequence
     int current_strand = starting_strand; // 0 = forward, 1 = reverse;
     int len_extension = 0;
     char newNT[max_depth+1];
-    KmerColour newColour[max_depth+1];
+    KmerColour new_colour[max_depth+1];
+    kmer_type new_kmer[max_depth+1];
     int nnt = 0;
     bool looping = false;
 
@@ -554,8 +561,10 @@ int Traversal::traverse_colour(kmer_type starting_kmer, char* resulting_sequence
     //printf(" traversing %llX strand:%d\n",starting_kmer,current_strand);
 
 //    while( (nnt=avance(current_kmer, current_strand, len_extension == 0, newNT, previous_kmer)))
-    while( (nnt=avance_colour(current_kmer, current_strand, len_extension == 0, newNT, newColour, previous_kmer)))
+    while( (nnt=avance_colour(current_kmer, current_strand, len_extension == 0, newNT, new_colour, previous_kmer)))
+//    while( (nnt=avance_colour(current_kmer, current_strand, len_extension == 0, newNT, new_kmer, new_colour, previous_kmer)))
     {
+    	printf("From avance_colour:nnt:%d\n",nnt);
         if (nnt < 0) // found branching or marked kmers
             break;
 
@@ -567,7 +576,12 @@ int Traversal::traverse_colour(kmer_type starting_kmer, char* resulting_sequence
         {
             resulting_sequence[len_extension]=newNT[cur_nt];
             //TODO: add resulting colour, from avance
-            resulting_colour[len_extension]=newColour[cur_nt];
+            resulting_colour[len_extension]=new_colour[cur_nt];
+//            if(nnt==1 && new_colour[cur_nt]>3){
+//            	KmerColour colour = GetColour(new_kmer[cur_nt]);
+//            	printf("=====nnt:%d\tcur_nt%d\tcolour:%u\t%s\n",nnt, cur_nt, colour, resulting_sequence);
+//            }
+
             len_extension++;
             previous_kmer = current_kmer;
 
@@ -595,7 +609,13 @@ int Traversal::traverse_colour(kmer_type starting_kmer, char* resulting_sequence
             break;
         }
     }
-    resulting_sequence[len_extension]='\0';
+//	printf("Strat bubbules size:%d\n", bubbles_positions.size());
+//	for (auto p : bubbles_positions) {
+//		printf("\tBubbles pair:%d\t%d\n", p.first, p.second);
+//	}
+//	printf("End bubbules size:%d\n", bubbles_positions.size());
+
+	resulting_sequence[len_extension]='\0';
     return len_extension;
 }
 
@@ -634,9 +654,10 @@ char RandomBranchingTraversal::avance(kmer_type kmer, int current_strand, bool f
 // 0 if a deadend was reached
 // -1 if out-branching was detected
 // -2 if no out-branching but next kmer has in-branching
+char bin2NT[4] = {'A','C','T','G'};
 int Traversal::simple_paths_avance(kmer_type kmer, int strand, bool first_extension, char * newNT)
 {
-    char bin2NT[4] = {'A','C','T','G'};
+//    char bin2NT[4] = {'A','C','T','G'};
 
     int nb_extensions = 0, in_branching_degree = 0;
     int good_nt;
@@ -664,29 +685,95 @@ int Traversal::simple_paths_avance(kmer_type kmer, int strand, bool first_extens
     return 0;
 }
 
-int Traversal::simple_paths_avance_colour(kmer_type kmer, int strand, bool first_extension, char * newNT, KmerColour * newColour)
+
+//int Traversal::simple_paths_avance_colour(kmer_type kmer, int strand, bool first_extension, char * newNT, kmer_type *new_kmer, KmerColour * new_colour)
+int Traversal::simple_paths_avance_colour(kmer_type kmer, int strand, bool first_extension, char * newNT, KmerColour * new_colour)
 {
-    char bin2NT[4] = {'A','C','T','G'};
+
 
     int nb_extensions = 0, in_branching_degree = 0;
     int good_nt;
 
     // return the number of possible forward extensions
     nb_extensions = extensions(kmer, strand, good_nt);
+    char debug=0;
+    if(debug){
+		char kmer_seq[sizeKmer+1];
+		if(!strand){
+
+			code2seq(kmer,kmer_seq);
+			printf("kmer:%lu\t%s\t", kmer, kmer_seq);
+		}
+		else{
+			kmer_type rev_kmer = revcomp(kmer);
+			code2seq(rev_kmer,kmer_seq);
+			printf("kmer:%lu\t%s\t", rev_kmer, kmer_seq);
+		}
+	}
 
     if (nb_extensions == 1)
     {
         // if the next kmer has in-branching, don't extend the current kmer
         int second_strand = strand;
         kmer_type second_kmer = next_kmer(kmer,good_nt,&second_strand);
-        KmerColour second_kmer_colour = getColour(second_kmer);//TODO: need colour file, where should I store it?
         int osef;
         in_branching_degree = extensions(second_kmer,1-second_strand,osef);
         if (in_branching_degree > 1)
             return -2;
 
+        if(debug){
+        	char kmer_seq[sizeKmer+1];
+			if(!strand){
+
+				code2seq(second_kmer,kmer_seq);
+				printf("===2nd_kmer:%lu\t%c\t%s\t", second_kmer, bin2NT[good_nt], kmer_seq);
+				kmer_type rev_kmer = revcomp(second_kmer);
+				code2seq(rev_kmer,kmer_seq);
+				printf("%s\n", kmer_seq);
+			}
+			else{
+				kmer_type rev_kmer = revcomp(second_kmer);
+				code2seq(rev_kmer,kmer_seq);
+				printf("===2nd_kmer:%lu\t%c\t%s\t", rev_kmer, bin2NT[good_nt], kmer_seq);
+				code2seq(second_kmer,kmer_seq);
+				printf("%s\n", kmer_seq);
+			}
+//
+//			kmer:3262397728142974284	TGCCACTCCGCCGATGTCTAAAAGCGCCAGA	SkipSimple:0	1 --->Right:93	AAGCAGATTATACGGAATACATATCCCGACACCGGCAGCTGAAATGATGCAGAAGCCTTGCTTGCCACTCCGCCGATGTCTAAAAGCGCCAGA
+//			kmer:1792173094268504747	CTAGCGGACAGGTGGACAGGTAGAATTTTTG	===2nd_kmer:2557006358646631087	G	TAGCGGACAGGTGGACAGGTAGAATTTTTGG	CCAAAAATTCTACCTGTCCACCTGTCCGCTA
+//			From avance_colour:nnt:1
+//			kmer:2557006358646631087	TAGCGGACAGGTGGACAGGTAGAATTTTTGG	===2nd_kmer:3819098138325924214	C	GCCAAAAATTCTACCTGTCCACCTGTCCGCT	AGCGGACAGGTGGACAGGTAGAATTTTTGGC
+//			From avance_colour:nnt:1
+//			kmer:1004653397731748541	AGCGGACAGGTGGACAGGTAGAATTTTTGGC	===2nd_kmer:4018613590926994165	C	GCGGACAGGTGGACAGGTAGAATTTTTGGCC	GGCCAAAAATTCTACCTGTCCACCTGTCCGC
+//			From avance_colour:nnt:1
+//			kmer:4018613590926994165	GCGGACAGGTGGACAGGTAGAATTTTTGGCC	===2nd_kmer:2239396308425812948	A	CGGACAGGTGGACAGGTAGAATTTTTGGCCA	TGGCCAAAAATTCTACCTGTCCACCTGTCCG
+//			From avance_colour:nnt:1
+//			kmer:2239396308425812948	CGGACAGGTGGACAGGTAGAATTTTTGGCCA	===2nd_kmer:2005228447435396837	G	CTGGCCAAAAATTCTACCTGTCCACCTGTCC	GGACAGGTGGACAGGTAGAATTTTTGGCCAG
+//			From avance_colour:nnt:1
+//			=====nnt:1	cur_nt0	colour:100	GCCAG
+//			kmer:4345899215275863891	GGACAGGTGGACAGGTAGAATTTTTGGCCAG	SkipSimple:0	1 --->Left:5	CTGGC
+//			Kmer:CAAAAATTCTACCTGTCCACCTGTCCGCTAG
+//			Contig:129	CTGGCCAAAAATTCTACCTGTCCACCTGTCCGCTAGAAGCAGATTATACGGAATACATATCCCGACACCGGCAGCTGAAATGATGCAGAAGCCTTGCTTGCCACTCCGCCGATGTCTAAAAGCGCCAGA
+//
+//			kmer does not exist
+//			2005228447435396837	G	CTGGCCAAAAATTCTACCTGTCCACCTGTCC	GGACAGGTGGACAGGTAGAATTTTTGGCCAG
+//			zz_1Read5x.fasta:TCCCATCGGTTAATTCAATGTGCGTCAATCGGGT**TGGCCAAAAATTCTACCTGTCCACCTGTCCGCTAGAAGCAGATTATACGGAATACATATCCCGACA
+//			zz_1Read5x.fasta:TCCGTCAATCGGGA**TGGCCAAAAATTCTACCTGTCCACCTGTCCGCTAGAAGCAGATTATACGGAATACATATCCCGATACCGGCAGCTGAAATGATGCA
+//			zz_1Read5x.fasta:GTCCGCGTCCCATCTGTTAATTCAATGTCCGTCAATCGGGT**TGGCCAAAAATTCTACCTGTCCACCTGTCCGCTAGAAGCAGATTATACGGAATACATAT
+//UPDATE!! CTGGCCAAAAATTCTACCTGTCCACCTGTCC exist in fp list? why?
+        }
         *newNT = bin2NT[good_nt];
-        *newColour = second_kmer_colour;
+        //TODO working on matching colour: both dir missing
+//        Kmer:2005228447435396837 Does not exist. C:0
+//        RevComp:4345899215275863891	0
+		KmerColour second_kmer_colour;
+		KmerColour second_kmer_colour2;
+//		second_kmer_colour2 = GetColour(second_kmer);
+		GetColour(second_kmer, &second_kmer_colour);
+//		second_kmer_colour2 = 20;
+//		printf("k:%ld\tC:%u\t%u\t%d\t%p\t%d\n", second_kmer, second_kmer_colour, second_kmer_colour2, in_branching_degree, &second_kmer_colour, nb_extensions);
+		*new_colour = second_kmer_colour;
+//		*new_kmer = second_kmer;
         return 1;
     }
 
@@ -696,11 +783,70 @@ int Traversal::simple_paths_avance_colour(kmer_type kmer, int strand, bool first
     return 0;
 }
 
-KmerColour Traversal::getColour(kmer_type){
 
-	KmerColour colour = 1;
-//TODO Match kmer_type to kmer_colour using solid_kmers_colour!!
-	return colour;
+
+KmerColour Traversal::GetColour(kmer_type kmer, KmerColour *colour){
+	bool exist = hash->get_colour(kmer, colour);
+	if (!exist) {
+		*colour = 9;
+	}
+	return *colour;
+
+//	if (exist) {
+//		return *colour;
+//	}
+//	else{
+////		fprintf(stderr, "Kmer:%ld Does not exist. C:%u\n", kmer, *colour);
+//		kmer_type revcomp_new_graine = revcomp(kmer);
+//		bool exist = hash->get_colour(revcomp_new_graine, colour);
+//		kmer_type rev_rev = revcomp(revcomp_new_graine);
+//		if (exist) {
+//			kmer_type rev_rev = revcomp(revcomp_new_graine);
+//			fprintf(stderr, "RevComp EXIST:%ld\t%ld\t%u\t\n", revcomp_new_graine, rev_rev, *colour);
+//
+//			return *colour;
+//			//			2005228447435396837
+//		}
+//
+//		else {
+////			Kmer:2005228447435396837 Does not exist. C
+////			RevComp:4345899215275863891 does not exist:2005228447435396837
+////			fprintf(stderr, "BOTH FAIL!!RevComp:%ld does not exist:%ld\t%u\t\n", revcomp_new_graine, rev_rev, *colour);
+////			exit(-1);
+//			*colour=100;
+//		}
+//	}
+
+}
+
+KmerColour Traversal::GetColour(kmer_type kmer){
+	KmerColour colour = 0;
+//	fprintf(stderr, "Kmer:%ld  C:%u\n",kmer, colour);
+	bool exist = hash->get_colour(kmer, &colour);
+	if (exist){
+		return colour;
+	}
+	else{
+//		fprintf(stderr, "Kmer:%ld Does not exist. C:%u\n",kmer, colour);
+		kmer_type revcomp_new_graine = revcomp(kmer);
+		bool exist = hash->get_colour(revcomp_new_graine, &colour);
+//		fprintf(stderr, "RevComp:%ld\t%u\t\n", revcomp_new_graine, colour);
+		if (exist){
+			fprintf(stderr, "RevComp:%ld\t%u\t\n", revcomp_new_graine, colour);
+			return colour;
+//			2005228447435396837
+		}
+
+		else{
+
+//			fprintf(stderr, "BOTH dir fail!!:%ld\t%u\t\n", revcomp_new_graine, colour);
+//			exit(-1);
+			colour=100;
+			return colour;
+		}
+	}
+
+
 }
 
 
@@ -1036,10 +1182,49 @@ bool MonumentTraversal::all_consensuses_almost_identical(set<string> consensuses
     }
     return true;
 }
+//TODO: implement here!!
+bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start_strand,
+		char *consensus, KmerColour *new_colour, int &consensus_length, kmer_type previous_kmer, set<kmer_type> *all_involved_extensions)
+{
+    kmer_type end_kmer;
+    int end_strand;
 
+    // find end of branching, record all involved extensions (for future marking)
+    // it returns false iff it's a complex bubble
+    int traversal_depth = find_end_of_branching(start_kmer, start_strand, end_kmer, end_strand, previous_kmer, all_involved_extensions);
+    if (!traversal_depth)
+        return false;
+
+    // find all consensuses between start node and end node
+    set<string> consensuses;
+    bool success;
+    consensuses = all_consensuses_between(start_kmer, start_strand, end_kmer, end_strand, traversal_depth+1, success);
+    // if consensus phase failed, stop
+    if (!success)
+        return false;
+
+    // validate paths, based on identity
+    bool validated = validate_consensuses(consensuses, consensus, consensus_length);
+    if (!validated)
+        return false;
+
+    // the consensuses agree, mark all the involved extensions
+    // (corresponding to alternative paths we will never traverse again)
+    mark_extensions(all_involved_extensions);
+
+    return true;
+}
 
 // similar to Monument's extension_graph.py:explore_branching
 // return true if the branching can be traversed, and mark all involved nodes
+bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start_strand, char *consensus, KmerColour *kmer_colour, int &consensus_length, kmer_type previous_kmer)
+{
+    set<kmer_type> *all_involved_extensions = new set<kmer_type>;
+    bool res = explore_branching_colour(start_kmer, start_strand, consensus, kmer_colour, consensus_length, previous_kmer, all_involved_extensions);
+    delete all_involved_extensions;
+    return res;
+}
+
 bool MonumentTraversal::explore_branching(kmer_type start_kmer, int start_strand,
 		char *consensus, int &consensus_length, kmer_type previous_kmer, set<kmer_type> *all_involved_extensions)
 {
@@ -1073,6 +1258,7 @@ bool MonumentTraversal::explore_branching(kmer_type start_kmer, int start_strand
 }
 
 // wrapper
+// wrapper
 bool MonumentTraversal::explore_branching(kmer_type start_kmer, int start_strand, char *consensus, int &consensus_length, kmer_type previous_kmer)
 {
     set<kmer_type> *all_involved_extensions = new set<kmer_type>;
@@ -1080,6 +1266,7 @@ bool MonumentTraversal::explore_branching(kmer_type start_kmer, int start_strand
     delete all_involved_extensions;
     return res;
 }
+
 
 
 // invariant here:
@@ -1109,11 +1296,13 @@ char MonumentTraversal::avance(kmer_type kmer, int current_strand, bool first_ex
     return newNT_length;
 }
 
-char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand, bool first_extension, char * newNT, KmerColour * newColour, kmer_type previous_kmer)
+//XXX avance_colour HERE
+//char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand, bool first_extension, char * newNT, kmer_type *new_kmer, KmerColour * newColour, kmer_type previous_kmer)
+char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand, bool first_extension, char * newNT, KmerColour * new_colour, kmer_type previous_kmer)
 {
 
     // if we're on a simple path, just traverse it
-    int is_simple_path = simple_paths_avance_colour(kmer, current_strand, first_extension, newNT, newColour);
+    int is_simple_path = simple_paths_avance_colour(kmer, current_strand, first_extension, newNT, new_colour);
     if (is_simple_path > 0)
         return 1;
 
@@ -1126,8 +1315,12 @@ char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand, bool f
     // * computing all possible paths between start and end
     // * returns one flattened consensus sequence
     int newNT_length;
-    //TODO: Hard to implement this one
-    bool success = explore_branching(kmer, current_strand, newNT, newNT_length, previous_kmer);
+    //TODO: Hard to implement this one: explore_branching
+    bool success = explore_branching_colour(kmer, current_strand, newNT, new_colour, newNT_length, previous_kmer);
+    for (int i = 0; i < newNT_length; ++i) {
+		new_colour[i] = 8;
+	}
+//    printf("SkipSimple:%d\t%d --->", is_simple_path, newNT_length);
     if (!success)
         return 0;
 

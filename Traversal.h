@@ -47,15 +47,20 @@ protected:
     int max_breadth;
 
     BinaryBank *solid_kmers_colour;
-
+    OAHash *hash;
     virtual char avance(kmer_type graine, int current_strand, bool first_extension, char * newNT, kmer_type previous_kmer) = 0;
     virtual char avance_colour(kmer_type graine, int current_strand, bool first_extension, char * newNT, KmerColour *newColour, kmer_type previous_kmer) = 0;
-
+//    virtual char avance_colour(kmer_type graine, int current_strand, bool first_extension, char * newNT, kmer_type *new_kmer, KmerColour *new_colour, kmer_type previous_kmer) = 0;
     void mark_extensions(set<kmer_type> *extensions_to_mark);
 
 public:
-    Traversal(Bloom *given_bloom, Set *given_debloom, Terminator *given_terminator) : bloom(given_bloom), debloom(given_debloom), terminator(given_terminator), maxlen(1000000),max_depth(500),max_breadth(20) {}
-    ~Traversal();
+	Traversal(Bloom *given_bloom, Set *given_debloom,
+			Terminator *given_terminator) :
+			bloom(given_bloom), debloom(given_debloom), terminator(
+					given_terminator), maxlen(1000000), max_depth(500), max_breadth(
+					20) {
+	}
+	~Traversal();
     
     void set_maxlen(int);
     void set_max_depth(int);
@@ -69,6 +74,7 @@ public:
     // useful atomic avance functions
     int simple_paths_avance(kmer_type graine, int current_strand, bool first_extension, char * newNT);
     int simple_paths_avance_colour(kmer_type graine, int current_strand, bool first_extension, char * newNT, KmerColour * newColour);
+//    int simple_paths_avance_colour(kmer_type graine, int current_strand, bool first_extension, char * newNT, kmer_type *new_kmer, KmerColour * new_colour);
 
     char random_unmarked_avance(kmer_type graine, int current_strand, bool first_extension, char * newNT);
 	
@@ -79,7 +85,8 @@ public:
 
     vector<pair<int, int> > bubbles_positions; // record the start/end positions of traversed bubbles (only from the latest traverse() call)
 
-    KmerColour getColour(kmer_type);
+    KmerColour GetColour(kmer_type, KmerColour *colour);
+    KmerColour GetColour(kmer_type);
     void SetSolidKmersColour(BinaryBank *SolidKmersColour, int max_memory);
 
 };
@@ -131,17 +138,25 @@ class MonumentTraversal: public Traversal
     static const int consensuses_identity = 90; // traversing bubble if paths are all pair-wise identical by > 90%
     char avance(kmer_type graine, int current_strand, bool first_extension, char * newNT, kmer_type previous_kmer);
     char avance_colour(kmer_type graine, int current_strand, bool first_extension, char * newNT, KmerColour *newColour, kmer_type previous_kmer);
+//    char avance_colour(kmer_type graine, int current_strand, bool first_extension, char * newNT, kmer_type *new_kmer, KmerColour *newColour, kmer_type previous_kmer);
 
     set<string> all_consensuses_between(kmer_type start_kmer, int start_strand, kmer_type end_kmer, int end_strand, int traversal_depth, set<kmer_type> used_kmers, string current_consensus, bool &success);
     set<string> all_consensuses_between(kmer_type start_kmer, int start_strand, kmer_type end_kmer, int end_node, int traversal_depth, bool &success);
     int find_end_of_branching(kmer_type starting_kmer, int starting_strand, kmer_type &end_kmer, int &end_strand, kmer_type previous_kmer, set<kmer_type> *all_involved_extensions);
     bool explore_branching(kmer_type start_kmer, int start_strand, char *consensus, int &consensus_length, kmer_type previous_kmer);
     bool explore_branching(kmer_type start_kmer, int start_strand, char *consensus, int &consensus_length, kmer_type previous_kmer, set<kmer_type> *all_involved_extensions);
+
+    bool explore_branching_colour(kmer_type start_kmer, int start_strand, char *consensus, KmerColour *new_colour, int &consensus_length, kmer_type previous_kmer);
+    bool explore_branching_colour(kmer_type start_kmer, int start_strand, char *consensus, KmerColour *new_colour, int &consensus_length, kmer_type previous_kmer, set<kmer_type> *all_involved_extensions);
+
     bool validate_consensuses(set<string> consensuses, char *result, int &result_length);
 
 public:
     static bool all_consensuses_almost_identical(set<string> consensuses);
-    MonumentTraversal(Bloom *given_bloom, Set *given_debloom, Terminator *given_terminator) : Traversal(given_bloom,given_debloom,given_terminator) {}
+	MonumentTraversal(Bloom *given_bloom, Set *given_debloom,
+			Terminator *given_terminator) :
+			Traversal(given_bloom, given_debloom, given_terminator) {
+	}
 
 	bool find_starting_kmer(kmer_type kmer, kmer_type &starting_kmer);
     

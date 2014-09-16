@@ -184,6 +184,17 @@ void OAHash::increment(key_type graine, KmerColour colour) {
 
 
 
+bool OAHash::get_colour( key_type graine, KmerColour *colour)
+{
+    element_pair *element = find_slot(graine);
+    if (!is_occupied(element))
+        return false;
+    if ((element->key) == graine && (colour != NULL))
+        *colour = element->colour;
+    return true;
+}
+
+
 bool OAHash::get( key_type graine, int * val)
 { 
     element_pair *element = find_slot(graine);

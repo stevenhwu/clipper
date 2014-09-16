@@ -113,7 +113,7 @@ inline void assemble()
 		// everything will be marked during the traversal()'s
 		kmer_type starting_kmer;
 		code2seq(kmer,kmer_seq); // convert
-//		printf("Kmer:%li\t%s\n",kmer, kmer_seq);// Varified! kmer's matched seq from the original creation
+//		printf("StartWhile, init Kmer:%li\t%s\n",kmer, kmer_seq);// Varified! kmer's matched seq from the original creation
 		while (traversal->find_starting_kmer(kmer,starting_kmer))
 //		while (traversal->find_starting_kmer_inside_simple_path(kmer,starting_kmer))
 		{
@@ -129,6 +129,15 @@ inline void assemble()
 //            len_right = traversal->traverse(starting_kmer, right_traversal, 0);
 			len_right = traversal->traverse_colour(starting_kmer, right_traversal, right_colour_traversal, 0);
             mlenright= max(len_right,mlenright);
+            int debug=1;
+            if(debug){
+            	printf("RightSeq:%d\t%s\n", len_right, right_traversal);
+            	printf("RightColour:");
+            	for (int i = 0; i < len_right; ++i) {
+            		printf("%u ",right_colour_traversal[i]);
+				}
+            	printf("\n");
+            }
 
             // left extension, is equivalent to right extension of the revcomp
 //            len_left = traversal->traverse(starting_kmer, left_traversal, 1);
@@ -138,12 +147,25 @@ inline void assemble()
 
             // form the contig
             revcomp_sequence(left_traversal,len_left);
+
             strcpy(contig,left_traversal); // contig = revcomp(left_traversal)
 	        strcat(contig,kmer_seq);//               + starting_kmer
             strcat(contig,right_traversal);//           + right_traversal
 //TODO: How to represent multiple colour (number of colour) in contig
             contig_len=len_left+len_right+sizeKmer;
 
+            if(debug){
+            	printf("LeftSeq:%d\t%s\n", len_left, left_traversal);
+            	printf("LeftColour:");
+				for (int i = 0; i < len_left; ++i) {
+					printf("%u ",left_colour_traversal[i]);
+				}
+				printf("\n");
+
+				printf("Kmer:%s\n",kmer_seq);
+				printf("Contig:%d\t%s\n\n",contig_len ,contig);
+
+            }
             // save the contig
             if(contig_len >= MIN_CONTIG_SIZE)//TODO: add colour info here
             {
@@ -155,8 +177,10 @@ inline void assemble()
             }
             if (assemble_only_one_region != NULL)
                 break;
-        }
 
+//exit(-1);
+        }
+exit(-1);
         NbBranchingKmer++;
         if ((NbBranchingKmer%300)==0) fprintf (stderr,"%cLooping through branching kmer n° %lld / %lld  total nt   %lli   ",13,NbBranchingKmer,terminator->nb_branching_kmers,totalnt );
 
@@ -165,7 +189,7 @@ inline void assemble()
 
     }
     fclose(file_assembly);
-exit(-9);
+
     fprintf (stderr,"\n Total nt assembled  %lli  nbContig %lli\n",totalnt,nbContig);
     fprintf (stderr,"\n Max contig len  %lli (debug: max len left %lli, max len right %lli)\n",max_contig_len,mlenleft,mlenright);
     
@@ -176,6 +200,7 @@ exit(-9);
     free(contig);
     SolidKmers->close();
     solid_kmers_colour->close();
+exit(-9);
 }
 
 int main(int argc, char *argv[])
@@ -320,7 +345,8 @@ printf("==========START_FROM_SOLID_KMERS\n");
 
     bloo1 = bloom_create_bloo1((BloomCpt *)NULL, false);
 
-    NO_FALSE_POSITIVES_AT_ALL = 1;
+    NO_FALSE_POSITIVES_AT_ALL = 1;//TODO: change back to 0 later
+//    FOUR_BLOOM_VERSION = 1;
 	if (!NO_FALSE_POSITIVES_AT_ALL) { //TODO: deal with this later, use dummy_false_positivies()
 		printf("===============NO_FALSE_+ve_KMERS\n");
 		// load false positives from disk into false_positives

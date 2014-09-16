@@ -312,7 +312,10 @@ kmer_type next_kmer(kmer_type graine, int added_nt, int *strand)
     new_graine = (((temp_graine) * 4 )  + added_nt) & kmerMask;
     //new_graine = (((graine) >> 2 )  + ( ((kmer_type)added_nt) << ((sizeKmer-1)*2)) ) & kmerMask; // previous kmer
     kmer_type revcomp_new_graine = revcomp(new_graine);
-
+//XXX:DEBUG for unmatched kmer
+//    if(temp_graine == 2239396308425812948){
+//        	printf("%ld\t%d\t%ld\t%ld\n", temp_graine, added_nt, new_graine, revcomp_new_graine);
+//        }
     if (strand != NULL)
         *strand = (new_graine < revcomp_new_graine)?0:1;
 

@@ -2,6 +2,7 @@
 #include <algorithm> // for max()
 #include "Traversal.h"
 
+#include <iostream>
 #include "Kmer.h" //TODO remove later, debugging only
 
 using namespace std;
@@ -558,7 +559,7 @@ int Traversal::traverse_colour(kmer_type starting_kmer, char* resulting_sequence
     int bubble_start, bubble_end;
     bubbles_positions.clear();
 
-    //printf(" traversing %llX strand:%d\n",starting_kmer,current_strand);
+//    printf(" traversing %llX strand:%d\n",starting_kmer,current_strand);
 
 //    while( (nnt=avance(current_kmer, current_strand, len_extension == 0, newNT, previous_kmer)))
     while( (nnt=avance_colour(current_kmer, current_strand, len_extension == 0, newNT, new_colour, previous_kmer)))
@@ -788,7 +789,14 @@ int Traversal::simple_paths_avance_colour(kmer_type kmer, int strand, bool first
 KmerColour Traversal::GetColour(kmer_type kmer, KmerColour *colour){
 	bool exist = hash->get_colour(kmer, colour);
 	if (!exist) {
-		*colour = 9;
+		kmer_type rev_kmer = revcomp(kmer);
+		exist = hash->get_colour(rev_kmer, colour);
+		if (!exist) {
+			*colour = 9;
+		}
+		else{
+			printf("Found colour on revcomp!! can this actually happen??\nkmer:%lu r:%lu\n",kmer, rev_kmer);
+		}
 	}
 	return *colour;
 
@@ -828,20 +836,17 @@ KmerColour Traversal::GetColour(kmer_type kmer){
 	}
 	else{
 //		fprintf(stderr, "Kmer:%ld Does not exist. C:%u\n",kmer, colour);
-		kmer_type revcomp_new_graine = revcomp(kmer);
-		bool exist = hash->get_colour(revcomp_new_graine, &colour);
+		kmer_type rev_kmer = revcomp(kmer);
+		exist = hash->get_colour(rev_kmer, &colour);
 //		fprintf(stderr, "RevComp:%ld\t%u\t\n", revcomp_new_graine, colour);
 		if (exist){
-			fprintf(stderr, "RevComp:%ld\t%u\t\n", revcomp_new_graine, colour);
+			fprintf(stderr, "RevComp:%ld\t%u\t\n", rev_kmer	, colour);
 			return colour;
-//			2005228447435396837
 		}
-
 		else{
-
 //			fprintf(stderr, "BOTH dir fail!!:%ld\t%u\t\n", revcomp_new_graine, colour);
 //			exit(-1);
-			colour=100;
+			colour=9;
 			return colour;
 		}
 	}
@@ -862,9 +867,14 @@ char SimplePathsTraversal::avance(kmer_type kmer, int current_strand, bool first
 
 
 // a frontline is a set of nodes having equal depth in the BFS
-Frontline::Frontline(kmer_type starting_kmer, int starting_strand, Bloom *bloom, Set *debloom, Terminator *terminator, set<kmer_type> *all_involved_extensions, kmer_type previous_kmer, bool check_in_branching) :
-    starting_kmer(starting_kmer), starting_strand(starting_strand), bloom(bloom), debloom(debloom), terminator(terminator), all_involved_extensions(all_involved_extensions), previous_kmer(previous_kmer), check_in_branching(check_in_branching), depth(0)
-{
+Frontline::Frontline(kmer_type starting_kmer, int starting_strand, Bloom *bloom,
+		Set *debloom, Terminator *terminator,
+		set<kmer_type> *all_involved_extensions, kmer_type previous_kmer,
+		bool check_in_branching) :
+		starting_kmer(starting_kmer), starting_strand(starting_strand), bloom(
+				bloom), debloom(debloom), terminator(terminator), all_involved_extensions(
+				all_involved_extensions), previous_kmer(previous_kmer), check_in_branching(
+				check_in_branching), depth(0) {
     already_frontlined.insert(starting_kmer); 
     already_frontlined.insert(previous_kmer);
 
@@ -999,8 +1009,9 @@ bool Frontline::check_inbranching(kmer_type from_kmer, int from_strand)
 
 // similar to Monument's extension_graph.py:find_end_of_branching
 // basically do a bounded-depth, bounded-breadth BFS
-int MonumentTraversal::find_end_of_branching(kmer_type starting_kmer, int starting_strand, kmer_type &end_kmer, int &end_strand, kmer_type previous_kmer, set<kmer_type> *all_involved_extensions)
-{
+int MonumentTraversal::find_end_of_branching(kmer_type starting_kmer,
+		int starting_strand, kmer_type &end_kmer, int &end_strand,
+		kmer_type previous_kmer, set<kmer_type> *all_involved_extensions) {
     bool check_in_branching = true;
     Frontline frontline( starting_kmer, starting_strand, bloom, debloom, terminator, all_involved_extensions, previous_kmer, check_in_branching);
 
@@ -1041,10 +1052,14 @@ int MonumentTraversal::find_end_of_branching(kmer_type starting_kmer, int starti
 }
 
 // similar to Monument's extension_graph.py:all_paths_between
-set<string> MonumentTraversal::all_consensuses_between(kmer_type start_kmer, int start_strand, kmer_type end_kmer, int end_strand, int traversal_depth, set<kmer_type> used_kmers, string current_consensus, bool &success)
-{
+set<string> MonumentTraversal::all_consensuses_between(kmer_type start_kmer,
+		int start_strand, kmer_type end_kmer, int end_strand,
+		int traversal_depth, set<kmer_type> used_kmers,
+		string current_consensus, bool &success) {
+
+	char debug = 0;
     char bin2NT[4] = {'A','C','T','G'};
-    //printf("all consensuses between traversal_depth: %d kmer %s success %d\n",traversal_depth,print_kmer(start_kmer),success);
+//    printf("all consensuses between traversal_depth: %d kmer %s success %d\n",traversal_depth,print_kmer(start_kmer),success);
     set<string> consensuses;
 
     // find_end_of_branching and all_consensues_between do not always agree on clean bubbles ends
@@ -1092,7 +1107,6 @@ set<string> MonumentTraversal::all_consensuses_between(kmer_type start_kmer, int
             // recursive call to all_consensuses_between
             set<string> new_consensuses = all_consensuses_between(new_graine, new_strand, end_kmer, end_strand, traversal_depth - 1, extended_kmers, extended_consensus, success);
             consensuses.insert(new_consensuses.begin(), new_consensuses.end());
-
             // mark to stop we end up with too many consensuses
             if (consensuses.size() > (unsigned int )max_breadth)
                 success = false;
@@ -1102,18 +1116,29 @@ set<string> MonumentTraversal::all_consensuses_between(kmer_type start_kmer, int
         if (success == false)
             return consensuses;
     }
+//    printf("set size:%d\t currentDepth: %d\n", used_kmers.size(), traversal_depth);
+//    for(auto k : used_kmers){
+//    		printf("kmer:%lu\t%s\n",k,print_kmer(k));
+//    	}
     return consensuses;
 }
 
 // just a wrapper
-set<string> MonumentTraversal::all_consensuses_between(kmer_type start_kmer, int start_strand, kmer_type end_kmer, int end_strand, int traversal_depth, bool &success)
-{
+set<string> MonumentTraversal::all_consensuses_between(kmer_type start_kmer,
+		int start_strand, kmer_type end_kmer, int end_strand,
+		int traversal_depth, bool &success) {
     set<kmer_type> used_kmers;
     used_kmers.insert(start_kmer);
     string current_consensus;
     success = true;
-    //printf("all cons between - end kmer = %s\n",print_kmer(end_kmer));
-    return all_consensuses_between(start_kmer, start_strand, end_kmer, end_strand, traversal_depth, used_kmers, current_consensus, success);
+//    printf("all cons between - end kmer = %s\n",print_kmer(end_kmer));
+
+	set<string> allConsensusesBetween =
+			all_consensuses_between(start_kmer, start_strand, end_kmer,
+					end_strand, traversal_depth, used_kmers, current_consensus,
+					success);
+
+	return allConsensusesBetween;
 }
 
 // similar to Monument's extension_graph.py:validate_paths
@@ -1186,6 +1211,7 @@ bool MonumentTraversal::all_consensuses_almost_identical(set<string> consensuses
 bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start_strand,
 		char *consensus, KmerColour *new_colour, int &consensus_length, kmer_type previous_kmer, set<kmer_type> *all_involved_extensions)
 {
+	int debug= 0;
     kmer_type end_kmer;
     int end_strand;
 
@@ -1195,22 +1221,83 @@ bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start
     if (!traversal_depth)
         return false;
 
+
     // find all consensuses between start node and end node
     set<string> consensuses;
     bool success;
+
+    if(debug){
+//    	for(auto k : *all_involved_extensions){
+//    	    	printf("ext:%s\n",print_kmer(k));
+//		}
+		printf("start:(%d)%lu, end:(%d)%lu\tDepth:%d\n", start_strand, start_kmer, end_strand, end_kmer, traversal_depth);
+		char *kmer_seq1 = (char*) malloc( sizeof(char)*30 );
+		char *kmer_seq2 = (char*) malloc( sizeof(char)*30 );
+		code2seq(start_kmer, kmer_seq1);
+		code2seq(end_kmer, kmer_seq2);
+		if(start_strand)
+			code2seq(revcomp(start_kmer), kmer_seq1);
+		if(end_strand)
+			code2seq(revcomp(end_kmer), kmer_seq2);
+		printf("start:%s, end:%s\n", kmer_seq1, kmer_seq2);
+    }
+
     consensuses = all_consensuses_between(start_kmer, start_strand, end_kmer, end_strand, traversal_depth+1, success);
+
+    if(debug){
+		printf("success:%u\n", success);
+		for(auto s: consensuses){
+			printf("Consensuses:%s\n", s.data() );
+		}
+    }
+
+    if(consensuses.size() ==1){
+		set<string>::iterator c0 = consensuses.begin();
+//		const std::basic_string<char, std::char_traits<char>,
+//				std::allocator<char> > c0a = *c0;
+
+		string s = *c0;
+
+		printf("test:%d\n",s.length() );
+		kmer_type new_graine = start_kmer;
+		for (int i = 0; i < s.length(); ++i) {
+			char c = s[i];
+			int nt2int = NT2int(c);
+			int new_strand = start_strand;
+			new_graine = next_kmer(new_graine, nt2int ,&new_strand);
+			kmer_type rev = revcomp(new_graine);
+			char kmer_seq[30];
+			code2seq(rev, kmer_seq);
+			new_colour[i] = GetColour(new_graine);
+			printf("char:%c %d %s %u %s %lu %lu\n",  c, nt2int, print_kmer(new_graine),  new_colour[i], kmer_seq,  new_graine, rev);
+
+		}
+
+
+    }
+    else{
+    	printf("FAIL!! Not yet implemented");
+    	for(set<string>::iterator c0 = consensuses.begin(); c0 != consensuses.end(); c0++) {
+    	   string element = *c0;
+    	}
+
+    }
+
+
     // if consensus phase failed, stop
     if (!success)
         return false;
 
     // validate paths, based on identity
     bool validated = validate_consensuses(consensuses, consensus, consensus_length);
+	printf("Consensus:%s\n", consensus);
     if (!validated)
         return false;
 
     // the consensuses agree, mark all the involved extensions
     // (corresponding to alternative paths we will never traverse again)
     mark_extensions(all_involved_extensions);
+
 
     return true;
 }
@@ -1318,9 +1405,12 @@ char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand, bool f
     //TODO: Hard to implement this one: explore_branching
     bool success = explore_branching_colour(kmer, current_strand, newNT, new_colour, newNT_length, previous_kmer);
     for (int i = 0; i < newNT_length; ++i) {
-		new_colour[i] = 8;
+//		new_colour[i] = 8;
+    	printf("%lu ",new_colour[i]);
 	}
-//    printf("SkipSimple:%d\t%d --->", is_simple_path, newNT_length);
+
+    printf("\nSkipSimple:%d\t%d --->", is_simple_path, newNT_length);
+//    exit(-1);
     if (!success)
         return 0;
 

@@ -172,7 +172,6 @@ int code2seq (kmer_type code, char *seq, int sizeKmer, kmer_type kmerMask)
         temp = temp>>2;
     }
 //    printf("sizeKmer = %d\t%li\t%i\n", sizeKmer, code, temp);
-//    exit(-1);
     seq[sizeKmer]='\0';
     return sizeKmer;
 }

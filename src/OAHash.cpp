@@ -178,7 +178,7 @@ void OAHash::increment(key_type graine, KmerColour colour) {
 	element-> colour = element-> colour  | 1 << colour;
 //	printf("Hash::%u\t%u\n",element->value, element->colour);
 
-//	exit(0);
+
 }
 
 

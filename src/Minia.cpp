@@ -118,7 +118,7 @@ inline void assemble()
 //		while (traversal->find_starting_kmer_inside_simple_path(kmer,starting_kmer))
 		{
 		    code2seq(starting_kmer,kmer_seq); // convert starting kmer to nucleotide seq
-
+//		    printf("Starting_kmer:%lu %s",starting_kmer, kmer_seq);
             if (assemble_only_one_region != NULL)
             {
                 kmer_type dummy;
@@ -178,9 +178,10 @@ inline void assemble()
             if (assemble_only_one_region != NULL)
                 break;
 
-//exit(-1);
-        }
 exit(-1);
+        }
+//		printf("Done while look is assemble()\n");
+exit(-2);
         NbBranchingKmer++;
         if ((NbBranchingKmer%300)==0) fprintf (stderr,"%cLooping through branching kmer n° %lld / %lld  total nt   %lli   ",13,NbBranchingKmer,terminator->nb_branching_kmers,totalnt );
 
@@ -337,7 +338,7 @@ printf("==========START_FROM_SOLID_KMERS\n");
 	}
 
     // debloom, write false positives to disk, insert them into false_positives
-    LOAD_FALSE_POSITIVE_KMERS = 1; //TODO: change back to 0 later
+    LOAD_FALSE_POSITIVE_KMERS = 0; //TODO: change back to 0 later
     if (! LOAD_FALSE_POSITIVE_KMERS)
     {printf("==========LOAD_FALSE_+ve_KMERS\n");//Don't think we need to add colour to this section, double check LATER
         debloom(order, max_memory);

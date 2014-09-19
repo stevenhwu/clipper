@@ -17,6 +17,7 @@
 #include "Traversal.h" // for extensions() 
 
 using namespace::std;
+
 bool Terminator::verbose = true;
 
 // common terminator functions (actually, more like Kmer64 + bloom + debloom)
@@ -59,6 +60,7 @@ unsigned char Terminator::branching_structure(kmer_type graine)
 // determines if a kmer is branching or not
 bool Terminator::is_branching(kmer_type graine)
 {
+	int order = 0;
     assert(graine<=revcomp(graine));
 
     // method specific to order=0 (remember that order>0 is never used)

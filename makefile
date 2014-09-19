@@ -1,9 +1,38 @@
 CC=g++
-CFLAGS = -O4 -D_FILE_OFFSET_BITS=64 -std=c++11 # needed to handle files > 2 GB on 32 bits systems
-SRC=Pool.cpp Bank.cpp Bloom.cpp Hash16.cpp LargeInt.cpp Kmer.cpp Terminator.cpp Traversal.cpp LinearCounter.cpp Set.cpp Utils.cpp SortingCount.cpp Debloom.cpp OAHash.cpp
+CFLAGS = -O4 -Wall -D_FILE_OFFSET_BITS=64 -std=c++11 # needed to handle files > 2 GB on 32 bits systems
+SOURCES=Pool.cpp Bank.cpp Bloom.cpp Hash16.cpp LargeInt.cpp \
+	Kmer.cpp Terminator.cpp Traversal.cpp LinearCounter.cpp \
+	Set.cpp Utils.cpp SortingCount.cpp Debloom.cpp OAHash.cpp \
+	KmerColour.cpp
+
+TEST_SOURCES=KmerColour.cpp
+#Pool.cpp Bank.cpp Bloom.cpp Hash16.cpp LargeInt.cpp \
+#	Kmer.cpp Terminator.cpp Traversal.cpp LinearCounter.cpp \
+#	Set.cpp Utils.cpp SortingCount.cpp Debloom.cpp OAHash.cpp \
+#	KmerColour.cpp
+
 EXEC=minia
-OBJ= $(SRC:.cpp=.o)
+
+SRC_DIR=src/
+TEST_DIR=test/
+OBJ_DIR=obj/
+
+SRC=$(SOURCES:%=$(SRC_DIR)%)
+OBJ=$(SOURCES:%.cpp=$(OBJ_DIR)%.o)
+
+TEST_SRC=$(TEST_SOURCES:%.cpp=$(TEST_DIR)%Test.cpp)
+TEST_OBJ=$(TEST_SOURCES:%.cpp=$(OBJ_DIR)%Test.o)
+GTEST_DIR=/usr/include/gtest/
+
+SRCEXT   = cpp
+SRCDIR   = src/
+OBJDIR   = obj/
+BINDIR   = bin/
+SRCS    := $(shell find $(SRCDIR) -name '*.$(SRCEXT)')
+SRCDIRS := $(shell find . -name '*.$(SRCEXT)' -exec dirname {} \; | uniq)
+
 all: $(EXEC)
+
 
 ifeq ($(prof),1)
  CFLAGS+= -pg
@@ -57,20 +86,84 @@ ifneq ($(largeintlib),0)
     CFLAGS += -D_$(largeintlib) -DKMER_PRECISION=$(KMER_PRECISION)
 endif
 
+
 all: $(EXEC)
 
 minia: clean $(OBJ) Minia.cpp
 	$(CC) -o $@ $(OBJ) Minia.cpp $(CFLAGS) -lz
 
-inc: $(OBJ) Minia.cpp
-	$(CC) -o minia $(OBJ) Minia.cpp $(CFLAGS) -lz
+inc: $(OBJ) src/Minia.cpp
+	$(CC) -o minia $(OBJ) src/Minia.cpp $(CFLAGS) -lz
 
-%.o: %.cpp %.h
-	$(CC) -o $@ -c $< $(CFLAGS)
-
-
-%.o: %.c %.h 
-	$(CC) -o $@ -c $< $(CFLAGS)
-    
 clean:
-	rm -rf *.o
+	@rm -rf $(OBJ) $(TEST_OBJ)
+
+
+obj/%.o: src/%.cpp src/%.h test/%.cpp
+	echo "BOTH!!"
+	@$(call make-depend,$<,$@,$(subst .o,.d,$@))
+	$(CC) -o $@ -c $< $(CFLAGS)
+
+obj/%.o: src/%.cpp src/%.h
+#	echo "SRC ONLY" 
+	@$(call make-depend,$<,$@,$(subst .o,.d,$@))
+	$(CC)  -o $@ -c $< $(CFLAGS)
+
+obj/%.o: test/%.cpp
+#	echo "TEST ONLY"
+	@$(call make-depend,$<,$@,$(subst .o,.d,$@))
+	$(CC) -o $@ -c $< $(CFLAGS)  -I$(CURDIR)/
+
+
+#%Test.o: clean %Test.cpp $(SRP)%.cpp $(SRP)%.h
+#	echo  $(SRC_DIR)%.cpp $(SRC_DIR)%.h
+#	$(CC) -o $@ -c $< $(CFLAGS) -I$(GTEST_DIR) -I$(CURDIR)
+#	
+#$(TEST_OBJ): $(TEST_SRC) $(OBJ)
+#	echo $(TEST_SRC)
+#	$(CC) -o $(TEST_OBJ) -c $(TEST_SRC) $(CFLAGS) -I$(GTEST_DIR) -I$(CURDIR)
+
+
+test: $(OBJ) $(TEST_OBJ)
+	echo "callTest" $(TEST_OBJ) $(OBJ) $(SRC_DIR)%.cpp $(SRC_DIR)%.h
+	$(CC) $(CFLAGS) $(TEST_OBJ) $(OBJ) -I$(CURDIR) $(CURDIR)/include/gtest_main.a -lpthread -lz -o your_test;
+#	$(CC) $(CFLAGS) $(TEST_SRC) -I$(CURDIR) $(CURDIR)/include/gtest_main.a -lpthread -o your_test;
+#	$(CC) $(CFLAGS) $(TEST_SRC) -I$(CURDIR) $(CURDIR)/include/libgtest_main.a $(CURDIR)/include/libgtest.a -lpthread -o your_test;
+#	  g++ -I${GTEST_DIR}/include path/to/your_test.cc libgtest.a -o your_test
+#	
+debug2: clean $(TEST_OBJ)# %Test.cpp $(SRP)%.cpp $(SRP)%.h
+	echo  $(SRC_DIR)%.cpp $(SRC_DIR)%.h
+	echo $(CFLAGS)
+	$(CC) -o $@ -c $< $(CFLAGS) -I$(GTEST_DIR) -I$(CURDIR)
+
+debug: buildrepo $(OBJS)
+	echo $(TEST_OBJ)
+
+
+buildrepo:
+	@$(call make-repo)
+
+
+define make-repo
+   for dir in .; \
+   do \
+	mkdir -p $(OBJ_DIR)/$$dir; \
+   done
+endef
+
+
+# usage: $(call make-depend,source-file,object-file,depend-file)
+define make-depend
+  $(CC) -MM       \
+        -MF $3    \
+        -MP       \
+        -MT $2    \
+        $(CFLAGS) -I$(CURDIR)  \
+        $1
+endef
+
+
+
+
+#g++ -o minia obj/KmerColourTest.o obj/Pool.o obj/Bank.o obj/Bloom.o obj/Hash16.o obj/LargeInt.o obj/Kmer.o obj/Terminator.o obj/Traversal.o obj/LinearCounter.o obj/Set.o obj/Utils.o obj/SortingCount.o obj/Debloom.o obj/OAHash.o obj/KmerColour.o /home/sw167/Postdoc2/Software/minia-1.6088/include/gtest_main.a -O4 -Wall -D_FILE_OFFSET_BITS=64 -std=c++11  -lz -lpthread
+#g++ -g -std=c++11  obj/*.o /home/sw167/Postdoc2/Software/minia-1.6088/include/gtest_main.a -lpthread -o your_test -lz;

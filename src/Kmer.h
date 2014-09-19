@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <cstdint>
+#include "KmerColour.h"
 #ifdef _largeint
 #include "LargeInt.h"
 typedef LargeInt<KMER_PRECISION> kmer_type;
@@ -17,13 +18,7 @@ typedef uint64_t kmer_type;
 #endif
 #endif
 
-typedef unsigned char KmerColour;
-//typedef int kmer_colour;
-
-
 const size_t kSizeOfKmerType = sizeof(kmer_type);
-const size_t kSizeOfKmerColour = sizeof(KmerColour);
-
 
 extern int sizeKmer;
 extern kmer_type kmerMask;

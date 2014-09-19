@@ -10,6 +10,13 @@
 #include <vector> // for sorting_kmers
 #include <sys/time.h>
 
+#include <iterator>
+#include <iostream>
+using namespace std;
+
+
+
+
 #define NNKS 4 // default minimal abundance for solidity
 #define MIN_CONTIG_SIZE (2*sizeKmer+1)
 
@@ -56,6 +63,8 @@ inline void assemble()
     KmerColour *right_colour_traversal = (KmerColour *) malloc(maxlen*sizeof(KmerColour));
 
     char *contig          = (char *) malloc(2*(maxlen+sizeKmer)*sizeof(char));
+    KmerColour *contig_colour   = (KmerColour *) malloc(2*(maxlen+sizeKmer)*sizeof(KmerColour));
+
     kmer_type kmer;
 
     long long nbContig =0;
@@ -69,6 +78,7 @@ inline void assemble()
     BinaryBank *SolidKmers = new BinaryBank(return_file_name(solid_kmers_file),sizeof(kmer_type),0);
     BinaryBank *solid_kmers_colour = new BinaryBank(return_file_name(solid_kmers_colour_file), kSizeOfKmerType+kSizeOfKmerColour, 0);
 
+    char colour_seq[1000];
 
     STARTWALL(assembly);
 
@@ -79,7 +89,7 @@ inline void assemble()
     BranchingTerminator *terminator;
 
     if (LOAD_BRANCHING_KMERS)
-    {printf("LOA:%s\n",LOAD_BRANCHING_KMERS);
+    {printf("LOA:%d\n",LOAD_BRANCHING_KMERS);
         BinaryBank *BranchingKmers = new BinaryBank(return_file_name(branching_kmers_file),sizeof(kmer_type),false);
         terminator = new BranchingTerminator(BranchingKmers,SolidKmers, bloo1,false_positives);
         BranchingKmers->close();
@@ -88,7 +98,7 @@ inline void assemble()
         terminator = new BranchingTerminator(SolidKmers,genome_size, bloo1,false_positives);
 
     if (DUMP_BRANCHING_KMERS)
-    {printf("DUMP:%s\n",DUMP_BRANCHING_KMERS);
+    {printf("DUMP:%d\n",DUMP_BRANCHING_KMERS);
         BinaryBank *BranchingKmers = new BinaryBank(return_file_name(branching_kmers_file),sizeof(kmer_type),true);
         terminator->dump_branching_kmers(BranchingKmers);
         BranchingKmers->close();
@@ -118,6 +128,8 @@ inline void assemble()
 //		while (traversal->find_starting_kmer_inside_simple_path(kmer,starting_kmer))
 		{
 		    code2seq(starting_kmer,kmer_seq); // convert starting kmer to nucleotide seq
+		    KmerColour kmer_colour = traversal->GetColour(starting_kmer);
+
 //		    printf("Starting_kmer:%lu %s",starting_kmer, kmer_seq);
             if (assemble_only_one_region != NULL)
             {
@@ -131,12 +143,13 @@ inline void assemble()
             mlenright= max(len_right,mlenright);
             int debug=1;
             if(debug){
-            	printf("RightSeq:%d\t%s\n", len_right, right_traversal);
-            	printf("RightColour:");
-            	for (int i = 0; i < len_right; ++i) {
-            		printf("%u ",right_colour_traversal[i]);
-				}
-            	printf("\n");
+            	printf("RightSeq:%lld\t%s\n", len_right, right_traversal);
+//            	printf("RightColour:");
+//            	for (int i = 0; i < len_right; ++i) {
+//            		printf("%u ",right_colour_traversal[i]);
+//				}
+            	print_kmer_colour_pattern(right_colour_traversal, colour_seq, len_right);
+				printf("RightColour:%s\n",colour_seq);
             }
 
             // left extension, is equivalent to right extension of the revcomp
@@ -146,32 +159,114 @@ inline void assemble()
             mlenleft= max(len_left,mlenleft);
 
             // form the contig
-            revcomp_sequence(left_traversal,len_left);
 
+            printf("before Rev:%s\n",left_traversal);
+            revcomp_sequence(left_traversal,len_left);
+            rev_colour(left_colour_traversal, len_left);
+
+            printf("after Rev:%s\n",left_traversal);
             strcpy(contig,left_traversal); // contig = revcomp(left_traversal)
 	        strcat(contig,kmer_seq);//               + starting_kmer
             strcat(contig,right_traversal);//           + right_traversal
-//TODO: How to represent multiple colour (number of colour) in contig
-            contig_len=len_left+len_right+sizeKmer;
+			contig_len=len_left+len_right+sizeKmer;
+
+
+            int colour_len = 0;
+            KmerColour sep_colour = 12;// output with %x, so anything greater than 10;
+			colour_len = KmerColourC::append_colour(left_colour_traversal, len_left,
+					contig_colour, colour_len);
+			if(debug){
+				KmerColourC::append_colour(&sep_colour, 1, contig_colour,
+						colour_len);
+			}
+//            memset(contig_colour+pt_len, (int) kmer_colour, kSizeOfKmerColour*sizeKmer);
+//            pt_len += sizeKmer;
+
+			KmerColourC::append_colour(&kmer_colour, 1, contig_colour,
+					colour_len);
+
+			if(debug){
+				KmerColourC::append_colour(&sep_colour, 1, contig_colour,
+										colour_len);
+			}
+
+//            memcpy(contig_colour+colour_len, right_colour_traversal, len_right);
+//			colour_len += len_right;
+			KmerColourC::append_colour(right_colour_traversal, len_right,
+					contig_colour, colour_len);
+
 
             if(debug){
-            	printf("LeftSeq:%d\t%s\n", len_left, left_traversal);
-            	printf("LeftColour:");
-				for (int i = 0; i < len_left; ++i) {
-					printf("%u ",left_colour_traversal[i]);
-				}
-				printf("\n");
-
+            	printf("LeftSeq:%lld\t%s\n", len_left, left_traversal);
+//            	printf("LeftColour:");
+//				for (int i = 0; i < len_left; ++i) {
+//					printf("%u ",left_colour_traversal[i]);
+//				}
+//				printf("\n");
+            	print_kmer_colour_pattern(left_colour_traversal, colour_seq, len_left);
+				printf("RightColour:%s\n",colour_seq);
+				printf("====\n");
 				printf("Kmer:%s\n",kmer_seq);
-				printf("Contig:%d\t%s\n\n",contig_len ,contig);
+				printf("Contig:%lld\t%s\n",contig_len ,contig);
+//				printf("Colour:");
+//				for (int i = 0; i < pt_len; ++i) {
+//					printf("%x", contig_colour[i]);
+//				}
+
+				print_kmer_colour_pattern(contig_colour, colour_seq, colour_len);
+				printf("Colour:%s\n",colour_seq);
+				printf("KmerColour:%u\n",kmer_colour);
+//				printf("Colour:%d\t%s\n\n",pt_len+len_right ,contig_colour);
+
 
             }
+//            KmerColour t = 3;
+//            KmerColour *pt = &t;
+//            int count = number_of_colour(t);
+//            printf("Test Count:%d\t%u\t%u\n",count, t, *pt);
+//            t = 15;
+//            cout << "A" << endl;
+//            cout << +t << endl;
+//            cout << KmerColourC::number_of_colour_c(t) << endl;
+//            cout << "X" << endl;
+//            t = 15;
+//
+//            cout << KmerColourC::number_of_colour_s(t) << endl;
+//            cout << "E" << endl;
+//
+////            int count2 = number_of_colour2(&t);
+////            printf("Test Count:%d\t%u\t%u\n",count2, t, *pt);
+////
+//            t =15;
+//            int count3 = number_of_colour3(t);
+//			printf("Test Count:%d\t%u\t%u\n",count3, t, *pt);
+////
+//            t =7;
+//            int count22 = number_of_colour2(pt);
+//			printf("Test Count:%d\t%u\t%u\n",count22, t, *pt);
+            KmerColour colourk = 1;
+        	int no_colour = KmerColourC::number_of_colour_c(colourk);
+        	no_colour = KmerColourC::number_of_colour_s(colourk);
+        	no_colour = KmerColourN::number_of_colour_n(colourk);
+			int *all_colour = (int *) malloc(sizeof(int)*colour_len);
+			KmerColourC::get_all_colour(contig_colour, colour_len, all_colour);
+			for (int i = 0; i < colour_len; ++i) {
+				printf("%d",all_colour[i]);
+			}
+			printf("\naoeuaoeu\n");
+
+
             // save the contig
             if(contig_len >= MIN_CONTIG_SIZE)//TODO: add colour info here
             {
                 max_contig_len = max(max_contig_len,contig_len);
                 fprintf(file_assembly,">%lli__len__%lli \n",nbContig,contig_len);
                 fprintf(file_assembly,"%s\n",contig);
+
+                fprintf(file_colour_assembly,">%lli__len__%lli \n",nbContig,contig_len);
+				fprintf(file_colour_assembly,"%s\n",contig);
+				fprintf(file_colour_assembly,"%s\n",contig_colour);
+
                 nbContig++;
                 totalnt+=contig_len;
             }
@@ -183,7 +278,7 @@ exit(-1);
 //		printf("Done while look is assemble()\n");
 exit(-2);
         NbBranchingKmer++;
-        if ((NbBranchingKmer%300)==0) fprintf (stderr,"%cLooping through branching kmer n° %lld / %lld  total nt   %lli   ",13,NbBranchingKmer,terminator->nb_branching_kmers,totalnt );
+        if ((NbBranchingKmer%300)==0) fprintf (stderr,"%cLooping through branching kmer n° %" PRId64 "/ %" PRId64 " total nt   %lli" ,13,NbBranchingKmer,terminator->nb_branching_kmers,totalnt );
 
         if (nbContig > 0 && assemble_only_one_region != NULL)
             break;
@@ -207,6 +302,7 @@ exit(-9);
 int main(int argc, char *argv[])
 {
     
+
     if(argc <  6)
     {
         fprintf (stderr,"usage:\n");
@@ -268,7 +364,7 @@ int main(int argc, char *argv[])
         }
         if (sizeKmer>((int)sizeof(kmer_type)*4))
         {
-            printf("Max kmer size on this compiled version is %d\n",sizeof(kmer_type)*4);
+            printf("Max kmer size on this compiled version is %zu\n", sizeof(kmer_type)*4);
             exit(1);
         }
     }
@@ -307,7 +403,7 @@ int main(int argc, char *argv[])
        //max_memory = max( (1LL << estimated_bloom_size)/8LL /1024LL/1024LL, 1LL );
         max_memory =  max((int64_t) estimated_bloom_size/8LL /1024LL/1024LL,1LL);
 
-      printf("estimated values: nbits Bloom %lli, nb FP %lld, max memory %i MB\n",estimated_bloom_size,estimated_nb_FP,max_memory);
+      printf("estimated values: nbits Bloom %" PRId64 ", nb FP %" PRId64 ", max memory %i MB\n",estimated_bloom_size,estimated_nb_FP,max_memory);
 
     }
 
@@ -320,7 +416,7 @@ int main(int argc, char *argv[])
    
 
 
-    fprintf (stderr,"taille cell %u \n", sizeof(cell<kmer_type>));
+    fprintf (stderr,"taille cell %zu \n", sizeof(cell<kmer_type>));
 
     STARTWALL(0);
 printf("argv[i]%s", argv[1]);

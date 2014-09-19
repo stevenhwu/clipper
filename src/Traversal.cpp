@@ -86,6 +86,7 @@ void Traversal::mark_extensions(set<kmer_type> *extensions_to_mark)
 // todo-order>0: there is probably a minor bug: it is likely to return 0 extensions too early for end of contigs 
 int traversal_extensions(kmer_type kmer, int strand, int &nt, Bloom *bloom_solid_kmers, Set *debloom)
 {
+	int order = 0;
     if (order==0) // faster order=0 extensions (note: in fact, order is always equal to 0)
     {
         int nb_extensions = 0;
@@ -576,11 +577,10 @@ int Traversal::traverse_colour(kmer_type starting_kmer, char* resulting_sequence
         for (int cur_nt = 0; cur_nt < nnt; cur_nt++)
         {
             resulting_sequence[len_extension]=newNT[cur_nt];
-            //TODO: add resulting colour, from avance
             resulting_colour[len_extension]=new_colour[cur_nt];
 //            if(nnt==1 && new_colour[cur_nt]>3){
 //            	KmerColour colour = GetColour(new_kmer[cur_nt]);
-//            	printf("=====nnt:%d\tcur_nt%d\tcolour:%u\t%s\n",nnt, cur_nt, colour, resulting_sequence);
+            	printf("=====nnt:%d\tcur_nt%d\tnew_NT:%c\tcolour:%u\t%s\n",nnt, cur_nt, newNT[cur_nt], new_colour[cur_nt], resulting_sequence);
 //            }
 
             len_extension++;
@@ -821,14 +821,14 @@ KmerColour Traversal::GetColour(kmer_type kmer, KmerColour *colour){
 ////			RevComp:4345899215275863891 does not exist:2005228447435396837
 ////			fprintf(stderr, "BOTH FAIL!!RevComp:%ld does not exist:%ld\t%u\t\n", revcomp_new_graine, rev_rev, *colour);
 ////			exit(-1);
-//			*colour=100;
+//			*colour=9;
 //		}
 //	}
 
 }
 
 KmerColour Traversal::GetColour(kmer_type kmer){
-	KmerColour colour = 0;
+	KmerColour colour;
 //	fprintf(stderr, "Kmer:%ld  C:%u\n",kmer, colour);
 	bool exist = hash->get_colour(kmer, &colour);
 	if (exist){
@@ -1405,11 +1405,11 @@ char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand, bool f
     //TODO: Hard to implement this one: explore_branching
     bool success = explore_branching_colour(kmer, current_strand, newNT, new_colour, newNT_length, previous_kmer);
     for (int i = 0; i < newNT_length; ++i) {
-//		new_colour[i] = 8;
+
     	printf("%lu ",new_colour[i]);
 	}
 
-    printf("\nSkipSimple:%d\t%d --->", is_simple_path, newNT_length);
+    printf("\n---SkipSimple:%d\t%d ---\n", is_simple_path, newNT_length);
 //    exit(-1);
     if (!success)
         return 0;

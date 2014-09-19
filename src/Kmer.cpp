@@ -387,5 +387,6 @@ char* print_kmer(kmer_type kmer)
 char* print_kmer(kmer_type kmer, int sizeKmer, kmer_type kmerMask)
 {
     code2seq(kmer,debug_kmer_buffer, sizeKmer, kmerMask);
+
     return debug_kmer_buffer;
 }

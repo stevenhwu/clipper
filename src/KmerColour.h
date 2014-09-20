@@ -38,6 +38,7 @@ static int number_of_colour_s(KmerColour colour);
 static void get_all_colour(KmerColour *colour_seq, int colour_len, int *all_colour);
 static int append_colour(KmerColour* left_colour_traversal, long long len_left,
 		KmerColour* contig_colour, int &colour_len);
+static int colour_table(std::string &report, KmerColour *colour, int colour_len, int max_colour_count);
 static std::string summary (std::string &report, int *all_colour, int colour_len);
 
 };

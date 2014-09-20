@@ -40,7 +40,7 @@ int order = 0; // deblooming order; 0 = debloom everything; 1 = don't debloom 1-
 int64_t genome_size;
 Bloom * bloo1;
 
-
+int max_colour_count;
 inline void assemble()
 {
 
@@ -259,8 +259,10 @@ inline void assemble()
 			KmerColourC::summary(report, all_colour, colour_len);
 			printf("%s\n", report.data());
 			printf("\nSIZE: %zu\t%zu\n", report.size(), report.max_size());
-//
-            // save the contig
+
+			KmerColourC::colour_table(report, contig_colour, colour_len, max_colour_count);
+
+			// save the contig
             if(contig_len >= MIN_CONTIG_SIZE)//TODO: add colour info here
             {
                 max_contig_len = max(max_contig_len,contig_len);
@@ -440,6 +442,7 @@ printf("==========START_FROM_SOLID_KMERS\n");
 		sorting_count(Reads, prefix, max_memory, max_disk_space, write_count,
 				verbose, skip_binary_conversion);
 	}
+    max_colour_count = Reads->nb_files;
 
     // debloom, write false positives to disk, insert them into false_positives
     LOAD_FALSE_POSITIVE_KMERS = 0; //TODO: change back to 0 later

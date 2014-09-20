@@ -121,12 +121,7 @@ int KmerColourC::number_of_colour_s(KmerColour colour) {
 void KmerColourC::get_all_colour(KmerColour *colour, int colour_len, int *all_colour){
 
 	for (int i = 0; i < colour_len; ++i) {
-		if(colour[i]>8){
-			all_colour[i] = 0;
-		}
-		else{
-			all_colour[i] = KmerColourC::number_of_colour_s(colour[i]);
-		}
+		all_colour[i] = KmerColourC::number_of_colour_s(colour[i]);
 	}
 }
 
@@ -135,6 +130,44 @@ int KmerColourC::append_colour(KmerColour* left_colour_traversal, long long len_
 	memcpy(contig_colour + colour_len, left_colour_traversal, len_left); // contig = revcomp(left_traversal) //TODO: need to reverse as well??
 	colour_len += len_left;
 	return colour_len;
+}
+
+int KmerColourC::colour_table(std::string &report, KmerColour *colour, int colour_len, int max_colour_count){
+
+	report.clear();
+//	report.
+	KmerColour temp = colour[0];
+	int max = 0;
+	while (temp) {
+		temp = temp >> 1;
+		max++;
+	}
+	char matrix[max][colour_len];
+
+	for (int i = 0; i < colour_len; ++i) {
+
+		KmerColour temp = colour[i];
+		for (int j = 0; j < max; ++j) {
+			if(temp & 1){
+				matrix[j][i] = '*';
+			}
+			else{
+				matrix[j][i] = '.';
+			}
+			temp = temp >> 1;
+		}
+	}
+	for (int j = 0; j < max; ++j) {
+		for (int i = 0; i < colour_len; ++i) {
+			printf("%c",matrix[j][i]);
+			matrix[j][i]='0';
+		}
+		printf("\n");
+	}
+
+	return 0;
+
+
 }
 
 std::string KmerColourC::summary (std::string &report, int *all_colour, int colour_len){

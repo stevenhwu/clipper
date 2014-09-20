@@ -160,11 +160,11 @@ inline void assemble()
 
             // form the contig
 
-            printf("before Rev:%s\n",left_traversal);
+//            printf("before Rev:%s\n",left_traversal);
             revcomp_sequence(left_traversal,len_left);
             rev_colour(left_colour_traversal, len_left);
 
-            printf("after Rev:%s\n",left_traversal);
+//            printf("after Rev:%s\n",left_traversal);
             strcpy(contig,left_traversal); // contig = revcomp(left_traversal)
 	        strcat(contig,kmer_seq);//               + starting_kmer
             strcat(contig,right_traversal);//           + right_traversal
@@ -244,18 +244,22 @@ inline void assemble()
 //            t =7;
 //            int count22 = number_of_colour2(pt);
 //			printf("Test Count:%d\t%u\t%u\n",count22, t, *pt);
-            KmerColour colourk = 1;
-        	int no_colour = KmerColourC::number_of_colour_c(colourk);
-        	no_colour = KmerColourC::number_of_colour_s(colourk);
-        	no_colour = KmerColourN::number_of_colour_n(colourk);
+//            KmerColour colourk = 1;
+//        	int no_colour = KmerColourC::number_of_colour_c(colourk);
+//        	no_colour = KmerColourC::number_of_colour_s(colourk);
+//        	no_colour = KmerColourN::number_of_colour_n(colourk);
 			int *all_colour = (int *) malloc(sizeof(int)*colour_len);
 			KmerColourC::get_all_colour(contig_colour, colour_len, all_colour);
+			printf("No of colour: ");
 			for (int i = 0; i < colour_len; ++i) {
 				printf("%d",all_colour[i]);
 			}
-			printf("\naoeuaoeu\n");
-
-
+			printf("\n");
+			std::string report("==========\nSummary\n");
+			KmerColourC::summary(report, all_colour, colour_len);
+			printf("%s\n", report.data());
+			printf("\nSIZE: %zu\t%zu\n", report.size(), report.max_size());
+//
             // save the contig
             if(contig_len >= MIN_CONTIG_SIZE)//TODO: add colour info here
             {
@@ -265,18 +269,22 @@ inline void assemble()
 
                 fprintf(file_colour_assembly,">%lli__len__%lli \n",nbContig,contig_len);
 				fprintf(file_colour_assembly,"%s\n",contig);
-				fprintf(file_colour_assembly,"%s\n",contig_colour);
-
+//				fprintf(file_colour_assembly,"%s\n",contig_colour);
+				for (int i = 0; i < colour_len; ++i) {
+					fprintf(file_colour_assembly, "%d", all_colour[i]);
+				}
+				fprintf(file_colour_assembly,"%s\n",report.data());
                 nbContig++;
                 totalnt+=contig_len;
             }
             if (assemble_only_one_region != NULL)
                 break;
-
-exit(-1);
+//exit(-1);
         }
 //		printf("Done while look is assemble()\n");
-exit(-2);
+//fclose(file_assembly);
+//fclose(file_colour_assembly);
+//exit(-2);
         NbBranchingKmer++;
         if ((NbBranchingKmer%300)==0) fprintf (stderr,"%cLooping through branching kmer n° %" PRId64 "/ %" PRId64 " total nt   %lli" ,13,NbBranchingKmer,terminator->nb_branching_kmers,totalnt );
 
@@ -442,7 +450,7 @@ printf("==========START_FROM_SOLID_KMERS\n");
 
     bloo1 = bloom_create_bloo1((BloomCpt *)NULL, false);
 
-    NO_FALSE_POSITIVES_AT_ALL = 1;//TODO: change back to 0 later
+    NO_FALSE_POSITIVES_AT_ALL = 0;//TODO: change back to 0 later
 //    FOUR_BLOOM_VERSION = 1;
 	if (!NO_FALSE_POSITIVES_AT_ALL) { //TODO: deal with this later, use dummy_false_positivies()
 		printf("===============NO_FALSE_+ve_KMERS\n");

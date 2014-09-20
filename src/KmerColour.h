@@ -1,8 +1,8 @@
 #ifndef KmerColour_h
 #define KmerColour_h
 
-#include <stdint.h>
-#include <cstdint>
+#include <string>
+#include <stddef.h>
 
 
 
@@ -25,12 +25,9 @@ public:
 //	static int number_of_colour_c(KmerColour colour);
 static int number_of_colour_c(KmerColour colour){
 	int count = 0;
-//	colour = 2;
-	printf("Start:%u\n",colour);
 	while(colour){
 		count += colour & 1;
 		colour = colour >> 1;
-		printf("%u\n",colour);
 	}
 
 	return count;
@@ -41,6 +38,7 @@ static int number_of_colour_s(KmerColour colour);
 static void get_all_colour(KmerColour *colour_seq, int colour_len, int *all_colour);
 static int append_colour(KmerColour* left_colour_traversal, long long len_left,
 		KmerColour* contig_colour, int &colour_len);
+static std::string summary (std::string &report, int *all_colour, int colour_len);
 
 };
 
@@ -48,7 +46,7 @@ static int append_colour(KmerColour* left_colour_traversal, long long len_left,
 namespace KmerColourN{
 
 int number_of_colour_n(KmerColour colour);
-
+//static int number_of_colour_ns(KmerColour colour);
 }
 //
 //

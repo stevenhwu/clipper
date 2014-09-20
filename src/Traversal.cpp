@@ -6,7 +6,6 @@
 #include "Kmer.h" //TODO remove later, debugging only
 
 using namespace std;
-
 Traversal::~Traversal()
 {}
 
@@ -566,7 +565,7 @@ int Traversal::traverse_colour(kmer_type starting_kmer, char* resulting_sequence
     while( (nnt=avance_colour(current_kmer, current_strand, len_extension == 0, newNT, new_colour, previous_kmer)))
 //    while( (nnt=avance_colour(current_kmer, current_strand, len_extension == 0, newNT, new_kmer, new_colour, previous_kmer)))
     {
-    	printf("From avance_colour:nnt:%d\n",nnt);
+//    	printf("From avance_colour:nnt:%d\n",nnt);
         if (nnt < 0) // found branching or marked kmers
             break;
 
@@ -580,7 +579,7 @@ int Traversal::traverse_colour(kmer_type starting_kmer, char* resulting_sequence
             resulting_colour[len_extension]=new_colour[cur_nt];
 //            if(nnt==1 && new_colour[cur_nt]>3){
 //            	KmerColour colour = GetColour(new_kmer[cur_nt]);
-            	printf("=====nnt:%d\tcur_nt%d\tnew_NT:%c\tcolour:%u\t%s\n",nnt, cur_nt, newNT[cur_nt], new_colour[cur_nt], resulting_sequence);
+//            	printf("=====nnt:%d\tcur_nt%d\tnew_NT:%c\tcolour:%u\t%s\n",nnt, cur_nt, newNT[cur_nt], new_colour[cur_nt], resulting_sequence);
 //            }
 
             len_extension++;
@@ -1258,7 +1257,7 @@ bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start
 
 		string s = *c0;
 
-		printf("test:%d\n",s.length() );
+//		printf("test:%d\n",s.length() );
 		kmer_type new_graine = start_kmer;
 		for (int i = 0; i < s.length(); ++i) {
 			char c = s[i];
@@ -1269,7 +1268,7 @@ bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start
 			char kmer_seq[30];
 			code2seq(rev, kmer_seq);
 			new_colour[i] = GetColour(new_graine);
-			printf("char:%c %d %s %u %s %lu %lu\n",  c, nt2int, print_kmer(new_graine),  new_colour[i], kmer_seq,  new_graine, rev);
+//			printf("char:%c %d %s %u %s %lu %lu\n",  c, nt2int, print_kmer(new_graine),  new_colour[i], kmer_seq,  new_graine, rev);
 
 		}
 
@@ -1290,7 +1289,7 @@ bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start
 
     // validate paths, based on identity
     bool validated = validate_consensuses(consensuses, consensus, consensus_length);
-	printf("Consensus:%s\n", consensus);
+//	printf("Consensus:%s\n", consensus);
     if (!validated)
         return false;
 
@@ -1387,7 +1386,7 @@ char MonumentTraversal::avance(kmer_type kmer, int current_strand, bool first_ex
 //char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand, bool first_extension, char * newNT, kmer_type *new_kmer, KmerColour * newColour, kmer_type previous_kmer)
 char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand, bool first_extension, char * newNT, KmerColour * new_colour, kmer_type previous_kmer)
 {
-
+	int debug= 0;
     // if we're on a simple path, just traverse it
     int is_simple_path = simple_paths_avance_colour(kmer, current_strand, first_extension, newNT, new_colour);
     if (is_simple_path > 0)
@@ -1404,13 +1403,13 @@ char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand, bool f
     int newNT_length;
     //TODO: Hard to implement this one: explore_branching
     bool success = explore_branching_colour(kmer, current_strand, newNT, new_colour, newNT_length, previous_kmer);
-    for (int i = 0; i < newNT_length; ++i) {
 
-    	printf("%lu ",new_colour[i]);
-	}
-
-    printf("\n---SkipSimple:%d\t%d ---\n", is_simple_path, newNT_length);
-//    exit(-1);
+    if(debug){
+		for (int i = 0; i < newNT_length; ++i) {
+			printf("%d ", new_colour[i]);
+		}
+		printf("\n---SkipSimple:%d\t%d ---\n", is_simple_path, newNT_length);
+    }
     if (!success)
         return 0;
 

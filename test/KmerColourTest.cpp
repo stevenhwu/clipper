@@ -12,7 +12,7 @@ TEST(KmerColourSTest, number_of_colour){
 	KmerColour colours[] =	{1,2,3,4,5,6,7,8,9};
 	int expecteds[10] = 	{1,1,2,1,2,2,3,1,2};
 	for (int i = 0; i < 9; ++i) {
-		int no_colour = KmerColourC::number_of_colour_c(colours[i]);
+		int no_colour = KmerColourUtil::number_of_colour_c(colours[i]);
 		//	int no_colour2 = number_of_colour_s(colour);
 		ASSERT_EQ(expecteds[i], no_colour);
 		printf("%d\n",expecteds[i]);
@@ -20,18 +20,18 @@ TEST(KmerColourSTest, number_of_colour){
 
 	KmerColour colour = 1;
 	int expected = 1;
-	int no_colour = KmerColourC::number_of_colour_c(colour);
+	int no_colour = KmerColourUtil::number_of_colour_c(colour);
 //	int no_colour2 = number_of_colour_s(colour);
 	ASSERT_EQ(expected, no_colour);
 //0
 	colour = 2;
 	expected = 1;
-	no_colour = KmerColourC::number_of_colour_s(colour);
+	no_colour = KmerColourUtil::number_of_colour_s(colour);
 	ASSERT_EQ(expected, no_colour);
 
 	colour = 3;
 	expected = 2;
-	no_colour = KmerColourC::number_of_colour_s(colour);
+	no_colour = KmerColourUtil::number_of_colour_s(colour);
 	ASSERT_EQ(expected, no_colour);
 
 	colour = 4;

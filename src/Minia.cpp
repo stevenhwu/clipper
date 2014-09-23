@@ -148,7 +148,7 @@ inline void assemble()
 //            	for (int i = 0; i < len_right; ++i) {
 //            		printf("%u ",right_colour_traversal[i]);
 //				}
-            	print_kmer_colour_pattern(right_colour_traversal, colour_seq, len_right);
+            	kmer_colour_pattern_string(right_colour_traversal, colour_seq, len_right);
 				printf("RightColour:%s\n",colour_seq);
             }
 
@@ -172,27 +172,27 @@ inline void assemble()
 
 
             int colour_len = 0;
-            KmerColour sep_colour = 12;// output with %x, so anything greater than 10;
-			colour_len = KmerColourC::append_colour(left_colour_traversal, len_left,
+            KmerColour sep_colour = 101;// output with %x, so anything greater than 100;
+			colour_len = KmerColourUtil::append_colour(left_colour_traversal, len_left,
 					contig_colour, colour_len);
 			if(debug){
-				KmerColourC::append_colour(&sep_colour, 1, contig_colour,
+				KmerColourUtil::append_colour(&sep_colour, 1, contig_colour,
 						colour_len);
 			}
 //            memset(contig_colour+pt_len, (int) kmer_colour, kSizeOfKmerColour*sizeKmer);
 //            pt_len += sizeKmer;
 
-			KmerColourC::append_colour(&kmer_colour, 1, contig_colour,
+			KmerColourUtil::append_colour(&kmer_colour, 1, contig_colour,
 					colour_len);
 
 			if(debug){
-				KmerColourC::append_colour(&sep_colour, 1, contig_colour,
+				KmerColourUtil::append_colour(&sep_colour, 1, contig_colour,
 										colour_len);
 			}
 
 //            memcpy(contig_colour+colour_len, right_colour_traversal, len_right);
 //			colour_len += len_right;
-			KmerColourC::append_colour(right_colour_traversal, len_right,
+			KmerColourUtil::append_colour(right_colour_traversal, len_right,
 					contig_colour, colour_len);
 
 
@@ -203,19 +203,16 @@ inline void assemble()
 //					printf("%u ",left_colour_traversal[i]);
 //				}
 //				printf("\n");
-            	print_kmer_colour_pattern(left_colour_traversal, colour_seq, len_left);
+            	kmer_colour_pattern_string(left_colour_traversal, colour_seq, len_left);
 				printf("RightColour:%s\n",colour_seq);
-				printf("====\n");
 				printf("Kmer:%s\n",kmer_seq);
+				printf("KmerColour:%u\n",kmer_colour);
 				printf("Contig:%lld\t%s\n",contig_len ,contig);
 //				printf("Colour:");
 //				for (int i = 0; i < pt_len; ++i) {
 //					printf("%x", contig_colour[i]);
 //				}
 
-				print_kmer_colour_pattern(contig_colour, colour_seq, colour_len);
-				printf("Colour:%s\n",colour_seq);
-				printf("KmerColour:%u\n",kmer_colour);
 //				printf("Colour:%d\t%s\n\n",pt_len+len_right ,contig_colour);
 
 
@@ -248,20 +245,15 @@ inline void assemble()
 //        	int no_colour = KmerColourC::number_of_colour_c(colourk);
 //        	no_colour = KmerColourC::number_of_colour_s(colourk);
 //        	no_colour = KmerColourN::number_of_colour_n(colourk);
-			int *all_colour = (int *) malloc(sizeof(int)*colour_len);
-			KmerColourC::get_all_colour(contig_colour, colour_len, all_colour);
-			printf("No of colour: ");
-			for (int i = 0; i < colour_len; ++i) {
-				printf("%d",all_colour[i]);
-			}
-			printf("\n");
-			std::string report("==========\nSummary\n");
-			KmerColourC::summary(report, all_colour, colour_len);
-			printf("%s\n", report.data());
-			printf("\nSIZE: %zu\t%zu\n", report.size(), report.max_size());
+            std::string report("==========Summary==========\n");
+			KmerColourUtil::summary(report, contig_colour, colour_len);
 
-			KmerColourC::colour_table(report, contig_colour, colour_len, max_colour_count);
+//			printf("\nSIZE: %zu\t%zu\n", report.size(), report.max_size());
+			KmerColourUtil::colour_table(report, contig_colour, colour_len, max_colour_count);
+			printf("%s", report.data());
 
+
+			printf("\n================END======================\n");
 			// save the contig
             if(contig_len >= MIN_CONTIG_SIZE)//TODO: add colour info here
             {
@@ -271,10 +263,10 @@ inline void assemble()
 
                 fprintf(file_colour_assembly,">%lli__len__%lli \n",nbContig,contig_len);
 				fprintf(file_colour_assembly,"%s\n",contig);
-//				fprintf(file_colour_assembly,"%s\n",contig_colour);
-				for (int i = 0; i < colour_len; ++i) {
-					fprintf(file_colour_assembly, "%d", all_colour[i]);
-				}
+////				fprintf(file_colour_assembly,"%s\n",contig_colour);
+//				for (int i = 0; i < colour_len; ++i) {
+//					fprintf(file_colour_assembly, "%d", all_colour[i]);
+//				}
 				fprintf(file_colour_assembly,"%s\n",report.data());
                 nbContig++;
                 totalnt+=contig_len;

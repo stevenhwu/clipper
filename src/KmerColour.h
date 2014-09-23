@@ -4,14 +4,14 @@
 #include <string>
 #include <stddef.h>
 
-
+const int kErrorCode = 100;//TODO: with errorCode, fix or flexible? define only == or >=
 
 typedef unsigned char KmerColour;
 //typedef int kmer_colour;
 
 const size_t kSizeOfKmerColour = sizeof(KmerColour);
 
-char* print_kmer_colour_pattern(KmerColour *colour, char *seq, int length);
+char* kmer_colour_pattern_string(KmerColour *colour, char *seq, int length, int error_code=kErrorCode);
 
 void rev_colour(KmerColour *colour, int length);
 int count_colour(KmerColour *colour, int length);
@@ -19,32 +19,62 @@ int number_of_colour(KmerColour colour);
 int number_of_colour2(KmerColour *colour);
 int number_of_colour3(KmerColour &colour);
 
-class KmerColourC{
+class KmerColourUtil {
 public:
 
 //	static int number_of_colour_c(KmerColour colour);
-static int number_of_colour_c(KmerColour colour){
-	int count = 0;
-	while(colour){
-		count += colour & 1;
-		colour = colour >> 1;
+	static int number_of_colour_c(KmerColour colour) {
+		int count = 0;
+		while (colour) {
+			count += colour & 1;
+			colour = colour >> 1;
+		}
+
+		return count;
 	}
 
-	return count;
-}
+	static void get_all_colour_count2(KmerColour *colour_seq, int colour_len,
+				int *all_colour, int error_code = kErrorCode);
 
+	static int number_of_colour_s(KmerColour colour);
 
-static int number_of_colour_s(KmerColour colour);
-static void get_all_colour(KmerColour *colour_seq, int colour_len, int *all_colour);
-static int append_colour(KmerColour* left_colour_traversal, long long len_left,
-		KmerColour* contig_colour, int &colour_len);
-static int colour_table(std::string &report, KmerColour *colour, int colour_len, int max_colour_count);
-static std::string summary (std::string &report, int *all_colour, int colour_len);
+	static void get_all_colour_count(KmerColour *colour_seq, int colour_len,
+			int *all_colour, int error_code = kErrorCode);
+
+	static int append_colour(KmerColour* left_colour_traversal,
+			long long len_left, KmerColour* contig_colour, int &colour_len);
+
+	static int colour_table(std::string &report, KmerColour *colour,
+			int colour_len, int max_colour_count);
+
+	static std::string summary(std::string &report, KmerColour *kmer_colour,
+			int colour_len);
+
+	static void summary_colour_code(std::string &report, KmerColour *kmer_colour,
+			int colour_len);
+
+	static void summary_colour_count(std::string &report, KmerColour *kmer_colour,
+			int colour_len);
+
+};
+
+class KmerColourSummary {
+
+private:
+	int length;
+	KmerColour* kmer_colour;
+	int* colour_count;
+	int* delta_colour_count;
+
+public:
+	KmerColourSummary(KmerColour *colour, int colour_len): kmer_colour(colour), length(colour_len){}
+	void full_summary();
 
 };
 
 
-namespace KmerColourN{
+
+namespace KmerColourN {
 
 int number_of_colour_n(KmerColour colour);
 //static int number_of_colour_ns(KmerColour colour);

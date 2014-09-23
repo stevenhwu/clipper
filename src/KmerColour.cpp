@@ -16,16 +16,23 @@
 #include <unordered_map>
 #include <map>
 #include <memory>
+#include <cstdlib>
+#include <stdlib.h>
 //using namespace std;
 
 //extern int sizeKmer;
 //uint64_t nsolids = 0;
 
-char* print_kmer_colour_pattern(KmerColour *colour, char *seq, int length) {
+char* kmer_colour_pattern_string(KmerColour *colour, char *seq, int length, int error_code) {
 //	printf("Length:%d\n", length);
 //	int p = 0;
 	for (int i = 0; i < length; ++i) {
-		seq[i] = colour[i] + 48;
+		if(colour[i]< error_code){
+			seq[i] = colour[i] + 48;
+		}
+		else{
+			seq[i] = '#';//change to something later
+		}
 	}
 	seq[length] = '\0';
 
@@ -108,7 +115,7 @@ int number_of_colour3(KmerColour &colour) {
 
 //using namespace KmerColourS;
 
-int KmerColourC::number_of_colour_s(KmerColour colour) {
+int KmerColourUtil::number_of_colour_s(KmerColour colour) {
 	int count = 0;
 	while (colour) {
 		count += colour & 1;
@@ -118,23 +125,28 @@ int KmerColourC::number_of_colour_s(KmerColour colour) {
 	return count;
 }
 
-void KmerColourC::get_all_colour(KmerColour *colour, int colour_len, int *all_colour){
+void KmerColourUtil::get_all_colour_count(KmerColour *colour, int colour_len, int *all_colour, int error_code){
 
 	for (int i = 0; i < colour_len; ++i) {
-		all_colour[i] = KmerColourC::number_of_colour_s(colour[i]);
+		if(colour[i] < error_code){
+			all_colour[i] = KmerColourUtil::number_of_colour_s(colour[i]);
+		}
+		else{
+			all_colour[i] = 0;
+		}
 	}
 }
 
-int KmerColourC::append_colour(KmerColour* left_colour_traversal, long long len_left,
+int KmerColourUtil::append_colour(KmerColour* left_colour_traversal, long long len_left,
 		KmerColour* contig_colour, int &colour_len) {
 	memcpy(contig_colour + colour_len, left_colour_traversal, len_left); // contig = revcomp(left_traversal) //TODO: need to reverse as well??
 	colour_len += len_left;
 	return colour_len;
 }
 
-int KmerColourC::colour_table(std::string &report, KmerColour *colour, int colour_len, int max_colour_count){
+int KmerColourUtil::colour_table(std::string &report, KmerColour *colour, int colour_len, int max_colour_count){
 
-	report.clear();
+//	report.clear();
 //	report.
 	KmerColour temp = colour[0];
 	int max = 0;
@@ -142,8 +154,9 @@ int KmerColourC::colour_table(std::string &report, KmerColour *colour, int colou
 		temp = temp >> 1;
 		max++;
 	}
+	max=max_colour_count;
 	char matrix[max][colour_len];
-
+	printf("MAX_COLOUR:%d\n",max);
 	for (int i = 0; i < colour_len; ++i) {
 
 		KmerColour temp = colour[i];
@@ -169,40 +182,98 @@ int KmerColourC::colour_table(std::string &report, KmerColour *colour, int colou
 
 
 }
+void KmerColourUtil::summary_colour_code (std::string &report, KmerColour *kmer_colour, int colour_len){
+	char colour_seq[colour_len];
+	kmer_colour_pattern_string(kmer_colour, colour_seq, colour_len);
+	report.append("ColourCode:").append(colour_seq).append("\n");
 
-std::string KmerColourC::summary (std::string &report, int *all_colour, int colour_len){
+}
+
+void KmerColourUtil::summary_colour_count(std::string &report, KmerColour *kmer_colour, int colour_len){
+
+	int *all_colour = (int *) malloc(sizeof(int)*colour_len);
+//	int all_colour[colour_len];
+	get_all_colour_count(kmer_colour, colour_len, all_colour);
+	report.append("ColourCount:");
+	for (int i = 0; i < colour_len; ++i) {
+		report+= std::to_string(all_colour[i]) ;
+	}
+	report += "\n";
+}
+
+std::string KmerColourUtil::summary (std::string &report, KmerColour *kmer_colour_code, int colour_len){
+
+	summary_colour_code(report, kmer_colour_code, colour_len);
+	summary_colour_count(report, kmer_colour_code, colour_len);
+	int *all_colour_count = (int *) malloc(sizeof(int)*colour_len);
+	get_all_colour_count(kmer_colour_code, colour_len, all_colour_count);
+
 
 	char temp_char[10000];
 	int update_len = colour_len;
 //	std::unordered_map<int, int> counter;
 	std::map<int, int> counter;
+	std::map<int, int> delta_colour_pattern;
+	std::map<KmerColour, int> kmer_colour_pattern;
 
 	int no_of_swap = 0;
 	int no_of_swap_exclude_n = 0;
-	int temp_colour = all_colour[0];
-
 	const int exclude = 0;
-	int temp_colour_exclude = exclude;
 
+	int last_colour = all_colour_count[0];
+	int last_colour_exclude = exclude;
+	KmerColour last_kmer_colour = kmer_colour_code[0];
+
+//	int delta_count[colour_len];
+	std::string delta_string;
+	int colour_delta = 0;
 	for (int i = 0; i < colour_len; ++i) {
-		counter[all_colour[i]]++;
-		if( temp_colour != all_colour[i] ){
-			no_of_swap++;
+		int temp_count = all_colour_count[i];
+		KmerColour temp_kmer = kmer_colour_code[i];
+		counter[temp_count]++;
+		if(temp_count > kErrorCode){
+			update_len--;
 		}
-		temp_colour = all_colour[i];
-
-		if (all_colour[i] != exclude) {
-			if( temp_colour_exclude != all_colour[i] && temp_colour_exclude!=exclude){
-				no_of_swap_exclude_n ++;
+		else{
+			if (last_colour != temp_count) {
+				no_of_swap++;
+//				printf("%d_%s:%s\n",delta_count[i], std::to_string(delta_count[i]).data(), delta_string.data());
+//				itoa(t, delta_count, 10);
 			}
-			temp_colour_exclude = all_colour[i];
+
+
+			if (temp_count != exclude) {
+				if (last_colour_exclude != temp_count
+						&& last_colour_exclude != exclude) {
+					no_of_swap_exclude_n++;
+
+					colour_delta = temp_count-last_colour_exclude;
+				}
+				else{
+					colour_delta = 0;
+				}
+
+//				delta_count[i] = KmerColourUtil::number_of_colour_s(delta_kmer);
+
+//				delta_colour_pattern[colour_delta]++;
+//				delta_string += std::to_string(colour_delta);
+
+				last_colour_exclude = temp_count;
+			}
+			colour_delta = temp_count-last_colour;
+			delta_colour_pattern[colour_delta]++;
+			delta_string += std::to_string(colour_delta);
+			last_colour = temp_count;
+
+			KmerColour delta_kmer = last_kmer_colour ^ temp_kmer;
+			kmer_colour_pattern[delta_kmer]++;
+			last_kmer_colour = temp_kmer;
 		}
-
-
 
 	}
+//	char* delta_string = reinterpret_cast<char*>(delta_count);
 
-//	printf("SWAP:%d %d\n",no_of_swap, no_of_swap_exclude_zero);
+//	printf("SWAP:%d %d\n",no_of_swap, no_of_swap_exclude_n);
 
 //	typedef std::unordered_map<int, int> MapIntInt;
 //	for (MapIntInt::iterator it = counter.begin(); it != counter.end(); ++it ) {
@@ -212,34 +283,52 @@ std::string KmerColourC::summary (std::string &report, int *all_colour, int colo
 	if (counter.count(0)){
 		update_len -= counter[0];
 	}
+
 	std::vector<int> keys;
 	double mean = 0;
 	double mean_length = 0;
 	for (auto &it : counter){
-		if (it.first != 0) {
+		if (it.first != 0 && it.first < kErrorCode) {
 			keys.push_back(it.first);
 			mean += it.second*it.first;
 			mean_length += it.second;
-		}
-		sprintf(temp_char, "No. of Colour:%d  Count:%d/%d Percentage:%.3f%% \n", it.first, it.second,
+//		}
+		sprintf(temp_char, "ColourCode:%d  Count:%d/%d Percentage:%.3f%% \n", it.first, it.second,
 				update_len, 100 * it.second / (double) update_len);
-		printf(temp_char);
+//		printf(temp_char);
 		report.append(temp_char);
+		}
 
 	}
 	mean /= update_len;
-	mean_length /= keys.size(); //TODO: actually, it's not quite correct, 1,3 == 2,3 here!!
-	report += "Total length exclude (" + std::to_string(exclude) + "):" + std::to_string(update_len) +"\n";
+	mean_length /= (keys.size() * update_len); //TODO: actually, it's not quite correct, 1,3 == 2,3 here!!
+	report += "Total length exclude (" + std::to_string(exclude) + "):"
+			+ std::to_string(update_len) + "(" + std::to_string(colour_len)
+			+ ")\n";
 	report += "Number of swap:" + std::to_string(no_of_swap) +"\n";
 	report += "Number of swap exclude (" + std::to_string(exclude) + "):"
 			+ std::to_string(no_of_swap_exclude_n) + "\n";
-	report += "Mean colour count per site:" + std::to_string(mean) + "\n";
-	report += "Mean length per colour count:" +std::to_string(mean_length) + "\n";
+
+	report += "Swap Pattern: " + delta_string + "\n";
+	report += "Mean colour count per site :" + std::to_string(mean) + "\n";
+	report += "Mean length per colour count (delete later):" +std::to_string(mean_length) + "\n";
+
+	for(auto d : delta_colour_pattern){
+		sprintf(temp_char, "Change:%d  Count:%d\n", d.first, d.second);
+		report.append(temp_char);
+	}
+
+	for(auto k : kmer_colour_pattern){
+		sprintf(temp_char, "pattern:%d  Count:%d\n", k.first, k.second);
+		report.append(temp_char);
+	}
+
+
 //	printf("\nSIZE: %zu\t%zu\n", report.size(), report.max_size());
 //	report.append("Mean colour count per site:");
 
 
-//	printf("%s\n%x\n", report.data(), pt);
+//	printf("%s\n", report.data());
 	report += "==========\n";
 	return report;
 

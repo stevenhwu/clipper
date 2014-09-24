@@ -3,21 +3,21 @@
 
 #include <string>
 #include <stddef.h>
+#include <unordered_map>
+#include <map>
 
 const int kErrorCode = 100;//TODO: with errorCode, fix or flexible? define only == or >=
+//TODO: KmerColour unsign char 0-255, 8 species. dynamicly change to unsign short/int/long? for more species?
 
-typedef unsigned char KmerColour;
+typedef unsigned char KmerColour; //TODO char -> assume no more than 8 for now
 //typedef int kmer_colour;
 
 const size_t kSizeOfKmerColour = sizeof(KmerColour);
 
-char* kmer_colour_pattern_string(KmerColour *colour, char *seq, int length, int error_code=kErrorCode);
+int kmer_colour_pattern_string(KmerColour *colour, int length, char *seq,
+		int error_code = kErrorCode);
 
-void rev_colour(KmerColour *colour, int length);
-int count_colour(KmerColour *colour, int length);
-int number_of_colour(KmerColour colour);
-int number_of_colour2(KmerColour *colour);
-int number_of_colour3(KmerColour &colour);
+
 
 class KmerColourUtil {
 public:
@@ -32,11 +32,11 @@ public:
 
 		return count;
 	}
+	static void rev_colour(KmerColour *colour, int length);
+	static int count_colour(KmerColour *colour, int length);
 
-	static void get_all_colour_count2(KmerColour *colour_seq, int colour_len,
-				int *all_colour, int error_code = kErrorCode);
 
-	static int number_of_colour_s(KmerColour colour);
+	static int number_of_colour(KmerColour colour);
 
 	static void get_all_colour_count(KmerColour *colour_seq, int colour_len,
 			int *all_colour, int error_code = kErrorCode);
@@ -45,30 +45,78 @@ public:
 			long long len_left, KmerColour* contig_colour, int &colour_len);
 
 	static int colour_table(std::string &report, KmerColour *colour,
-			int colour_len, int max_colour_count);
+			int colour_len, int max_colour_count)__attribute__ ((deprecated));
 
 	static std::string summary(std::string &report, KmerColour *kmer_colour,
-			int colour_len);
+			int colour_len)__attribute__ ((deprecated));
 
 	static void summary_colour_code(std::string &report, KmerColour *kmer_colour,
-			int colour_len);
+			int colour_len)__attribute__ ((deprecated));
 
 	static void summary_colour_count(std::string &report, KmerColour *kmer_colour,
-			int colour_len);
+			int colour_len)__attribute__ ((deprecated));
 
 };
 
 class KmerColourSummary {
 
 private:
-	int length;
 	KmerColour* kmer_colour;
-	int* colour_count;
-	int* delta_colour_count;
+	int length;
+	int max_colour;
+
+	int valid_length;
+	double coverage;
+	std::vector<int> colour_count;
+	std::vector<int> delta_colour_count;
+	std::vector<char> colour_code;//	std::string colour_code;
+
+	std::unordered_map<int, int> colour_counter;
+	std::map<int, int> delta_colour_pattern;
+	std::map<KmerColour, int> delta_kmer_colour_pattern;
+
+	std::map<std::pair<KmerColour, int>, int> delta_pattern;
+
+	bool keep = true;
+	std::string reason;
+
+	char** matrix;
+
+	void preprocess_kmer_colour();
+
+//	int* colour_count;
+//	char* colour_code;
 
 public:
-	KmerColourSummary(KmerColour *colour, int colour_len): kmer_colour(colour), length(colour_len){}
+	KmerColourSummary(KmerColour *colour, int colour_len, int max_colour);
+//	:
+//			kmer_colour(colour), length(colour_len), max_colour(max_colour) {
+//		printf("Constructor in header\n");
+//	}
+	~KmerColourSummary();
 	void full_summary();
+
+
+	void summary_colour_code(std::string &report);
+	void summary_colour_count(std::string &report);
+	void summary_stat(std::string &report);
+	int colour_table(std::string &report);
+
+//	void KmerColourUtil::summary_colour_count(std::string &report,
+//			KmerColour *kmer_colour, int colour_len) {
+//
+//		int *all_colour = (int *) malloc(sizeof(int)*colour_len);
+//	//	int all_colour[colour_len];
+//		get_all_colour_count(kmer_colour, colour_len, all_colour);
+//		report.append("ColourCount:");
+//		for (int i = 0; i < colour_len; ++i) {
+//			report+= std::to_string(all_colour[i]) ;
+//		}
+//		report += "\n";
+//	}
+
+
+//	all_colour_count(int *all_colour, int error_code = kErrorCode);
 
 };
 

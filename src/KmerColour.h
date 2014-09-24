@@ -60,6 +60,12 @@ public:
 
 class KmerColourSummary {
 
+
+struct colourCounter{
+
+
+
+};
 private:
 	KmerColour* kmer_colour;
 	int length;
@@ -72,6 +78,7 @@ private:
 	std::vector<char> colour_code;//	std::string colour_code;
 
 	std::unordered_map<int, int> colour_counter;
+	std::unordered_map<int, int> colour_counter_percentage;
 	std::map<int, int> delta_colour_pattern;
 	std::map<KmerColour, int> delta_kmer_colour_pattern;
 

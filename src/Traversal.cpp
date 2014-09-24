@@ -7,7 +7,10 @@
 
 using namespace std;
 Traversal::~Traversal()
-{}
+{
+	printf("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
+	delete hash;
+}
 
 void Traversal::SetSolidKmersColour(BinaryBank *bank, int max_memory){
 	solid_kmers_colour = bank;
@@ -365,6 +368,7 @@ bool Traversal::find_starting_kmer_inside_simple_path(kmer_type branching_kmer, 
 // a k-mer that isn't inside a bubble/tip
 bool MonumentTraversal::find_starting_kmer(kmer_type branching_kmer, kmer_type &starting_kmer)
 {
+
     char newNT[2];
     int nt;
     bool debug=false;
@@ -1416,3 +1420,6 @@ char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand, bool f
     return newNT_length;
 }
 
+MonumentTraversal::~MonumentTraversal(){
+	printf("}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}\n");
+}

@@ -20,6 +20,8 @@ using namespace::std;
 
 bool Terminator::verbose = true;
 
+Terminator::~Terminator(){}
+
 // common terminator functions (actually, more like Kmer64 + bloom + debloom)
 
 // we define a structure 2x4 bits which indicates which nucleotides correspond to in- and out-branching of a kmer

@@ -26,7 +26,7 @@ TEST(KmerColourSTest, number_of_colour){
 //0
 	colour = 2;
 	expected = 1;
-	no_colour = KmerColourUtil::number_of_colour_s(colour);
+	no_colour = KmerColourUtil::number_of_colour(colour);
 	ASSERT_EQ(expected, no_colour);
 
 	colour = 3;

@@ -142,13 +142,13 @@ inline void assemble()
 			len_right = traversal->traverse_colour(starting_kmer, right_traversal, right_colour_traversal, 0);
             mlenright= max(len_right,mlenright);
             int debug=1;
-            if(debug){
+            if(debug>1){
             	printf("RightSeq:%lld\t%s\n", len_right, right_traversal);
 //            	printf("RightColour:");
 //            	for (int i = 0; i < len_right; ++i) {
 //            		printf("%u ",right_colour_traversal[i]);
 //				}
-            	kmer_colour_pattern_string(right_colour_traversal, colour_seq, len_right);
+            	kmer_colour_pattern_string(right_colour_traversal, len_right, colour_seq);
 				printf("RightColour:%s\n",colour_seq);
             }
 
@@ -162,7 +162,7 @@ inline void assemble()
 
 //            printf("before Rev:%s\n",left_traversal);
             revcomp_sequence(left_traversal,len_left);
-            rev_colour(left_colour_traversal, len_left);
+            KmerColourUtil::rev_colour(left_colour_traversal, len_left);
 
 //            printf("after Rev:%s\n",left_traversal);
             strcpy(contig,left_traversal); // contig = revcomp(left_traversal)
@@ -172,7 +172,7 @@ inline void assemble()
 
 
             int colour_len = 0;
-            KmerColour sep_colour = 101;// output with %x, so anything greater than 100;
+            KmerColour sep_colour = kErrorCode+1;// output with %x, so anything greater than 100;
 			colour_len = KmerColourUtil::append_colour(left_colour_traversal, len_left,
 					contig_colour, colour_len);
 			if(debug){
@@ -196,15 +196,15 @@ inline void assemble()
 					contig_colour, colour_len);
 
 
-            if(debug){
+            if(debug>1){
             	printf("LeftSeq:%lld\t%s\n", len_left, left_traversal);
 //            	printf("LeftColour:");
 //				for (int i = 0; i < len_left; ++i) {
 //					printf("%u ",left_colour_traversal[i]);
 //				}
 //				printf("\n");
-            	kmer_colour_pattern_string(left_colour_traversal, colour_seq, len_left);
-				printf("RightColour:%s\n",colour_seq);
+            	kmer_colour_pattern_string(left_colour_traversal, len_left, colour_seq);
+				printf("LeftColour:%s\n",colour_seq);
 				printf("Kmer:%s\n",kmer_seq);
 				printf("KmerColour:%u\n",kmer_colour);
 				printf("Contig:%lld\t%s\n",contig_len ,contig);
@@ -217,43 +217,20 @@ inline void assemble()
 
 
             }
-//            KmerColour t = 3;
-//            KmerColour *pt = &t;
-//            int count = number_of_colour(t);
-//            printf("Test Count:%d\t%u\t%u\n",count, t, *pt);
-//            t = 15;
-//            cout << "A" << endl;
-//            cout << +t << endl;
-//            cout << KmerColourC::number_of_colour_c(t) << endl;
-//            cout << "X" << endl;
-//            t = 15;
-//
-//            cout << KmerColourC::number_of_colour_s(t) << endl;
-//            cout << "E" << endl;
-//
-////            int count2 = number_of_colour2(&t);
-////            printf("Test Count:%d\t%u\t%u\n",count2, t, *pt);
-////
-//            t =15;
-//            int count3 = number_of_colour3(t);
-//			printf("Test Count:%d\t%u\t%u\n",count3, t, *pt);
-////
-//            t =7;
-//            int count22 = number_of_colour2(pt);
-//			printf("Test Count:%d\t%u\t%u\n",count22, t, *pt);
-//            KmerColour colourk = 1;
-//        	int no_colour = KmerColourC::number_of_colour_c(colourk);
-//        	no_colour = KmerColourC::number_of_colour_s(colourk);
-//        	no_colour = KmerColourN::number_of_colour_n(colourk);
+
             std::string report("==========Summary==========\n");
-			KmerColourUtil::summary(report, contig_colour, colour_len);
+//			KmerColourUtil::summary(report, contig_colour, colour_len);
+//			KmerColourUtil::colour_table(report, contig_colour, colour_len, max_colour_count);
+//			printf("%s", report.data());
 
-//			printf("\nSIZE: %zu\t%zu\n", report.size(), report.max_size());
-			KmerColourUtil::colour_table(report, contig_colour, colour_len, max_colour_count);
-			printf("%s", report.data());
-
-
-			printf("\n================END======================\n");
+			KmerColourSummary kcs(contig_colour, colour_len, max_colour_count);
+			kcs.summary_colour_code(report);
+			kcs.summary_colour_count(report);
+			kcs.summary_stat(report);
+			kcs.colour_table(report);
+//			printf("%s", report.data());
+//			delete &kcs;
+			printf("\n================END======================\n\n\n");
 			// save the contig
             if(contig_len >= MIN_CONTIG_SIZE)//TODO: add colour info here
             {
@@ -298,7 +275,8 @@ inline void assemble()
     free(contig);
     SolidKmers->close();
     solid_kmers_colour->close();
-exit(-9);
+    printf("===========DONE=========EXIT========\n");
+//exit(-9);
 }
 
 int main(int argc, char *argv[])

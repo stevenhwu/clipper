@@ -60,7 +60,7 @@ public:
 					given_terminator), maxlen(1000000), max_depth(500), max_breadth(
 					20) {
 	}
-	~Traversal();
+	virtual ~Traversal();
     
     void set_maxlen(int);
     void set_max_depth(int);
@@ -159,7 +159,7 @@ public:
 	}
 
 	bool find_starting_kmer(kmer_type kmer, kmer_type &starting_kmer);
-    
+	~MonumentTraversal();
 };
 
 

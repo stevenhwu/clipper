@@ -38,6 +38,7 @@ public:
 			SolidKmers(given_SolidKmers), bloom_solid_kmers(given_bloom), debloom(
 					given_debloom) {
 	}
+	virtual ~Terminator();
 };
 
 

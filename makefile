@@ -3,7 +3,7 @@ CFLAGS = -O4 -Wall -D_FILE_OFFSET_BITS=64 -std=c++11 # needed to handle files > 
 SOURCES=Pool.cpp Bank.cpp Bloom.cpp Hash16.cpp LargeInt.cpp \
 	Kmer.cpp Terminator.cpp Traversal.cpp LinearCounter.cpp \
 	Set.cpp Utils.cpp SortingCount.cpp Debloom.cpp OAHash.cpp \
-	KmerColour.cpp
+	KmerColour.cpp Memory.cpp
 
 TEST_SOURCES=KmerColour.cpp
 #Pool.cpp Bank.cpp Bloom.cpp Hash16.cpp LargeInt.cpp \

@@ -364,11 +364,23 @@ void KmerColourSummary::preprocess_kmer_colour(){
 
 
 KmerColourSummary::~KmerColourSummary(){
+//	printf("Destructor called\n");
 //	delete[] colour_code;
 //	delete[] colour_count;
 	for (int i = 0; i < max_colour; ++i) {
 		delete[] matrix[i];
 	}
+//	delete &colour_count;
+//	delete &delta_colour_count;
+//	delete &colour_code;//	std::string colour_code;
+//
+//	delete &colour_counter;
+//	delete &colour_counter_percentage;
+//	delete &delta_colour_pattern;
+//	delete &delta_kmer_colour_pattern;
+//
+//	delete &delta_pattern;
+
 }
 
 

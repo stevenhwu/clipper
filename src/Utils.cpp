@@ -21,6 +21,9 @@ const char *assoc_kmer_file = (char *)"paired_kmer";
 const char *solid_kmers_colour_file = (char *)"solid_kmers_colour_binary";
 const char *assembly_colour_file = (char *)"contigs_colour.fa";
 
+const int table_print_frequency = 1000000; //default 10000
+
+
 // prefix-based output files naming 
 char prefix[1024];
 char fileName[1024];
@@ -92,7 +95,7 @@ void bloom_pass_reads_binary(T *bloom_to_insert, BloomCpt *bloom_counter, char *
       bloom_to_insert->add(kmer);
       NbInsertedKmers++;
       NbRead++;
-      if ((NbRead%10000)==0) fprintf (stderr,stderr_message,13,(long long)NbRead);
+      if ((NbRead%table_print_frequency)==0) fprintf (stderr,stderr_message,13,(long long)NbRead);
     }
   fprintf (stderr,"\nInserted %lld %s kmers in the bloom structure.\n",(long long)NbInsertedKmers,"solid");
   SolidKmers->close();
@@ -607,7 +610,7 @@ void Progress::inc(uint64_t ntasks_done)
 {
     done += ntasks_done;
     partial += ntasks_done;
-    
+
     
     while(partial >= steps)
     {

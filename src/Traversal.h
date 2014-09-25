@@ -130,6 +130,7 @@ public:
     int size();
     node front();
     bool check_inbranching(kmer_type from_kmer, int current_strand);
+    ~Frontline();
 };
 
 class MonumentTraversal: public Traversal

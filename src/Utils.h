@@ -73,6 +73,7 @@ template<typename T,typename U>void bloom_pass_reads(Bank *Sequences,T *bloom_to
 
 float needleman_wunch(string a, string b);
 
+extern const int table_print_frequency;
 
 class Progress
 {

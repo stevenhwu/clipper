@@ -239,9 +239,9 @@ int first =1;
             
             
             NbRead++;
-            if ((NbRead%10000)==0)
+            if ((NbRead%table_print_frequency)==0)
             {
-                progress_conversion.inc(10000);
+                progress_conversion.inc(table_print_frequency);
             }
         }
         progress_conversion.finish();
@@ -425,9 +425,9 @@ int first =1;
                 }
 #endif
              //   if ((NbRead%10000)==0)
-                if(tempread> 10000)
+                if(tempread> table_print_frequency)
                 {
-                    tempread -= 10000;
+                    tempread -= table_print_frequency;
                     if (verbose)
                         fprintf (stderr,"%cPass %d/%d, loop through reads to separate (redundant) kmers into partitions, processed %lluM reads out of %lluM",13,current_pass+1,nb_passes,(unsigned long long)(NbRead/1000/1000),(unsigned long long)(estimated_NbReads/1000/1000));
 #if !SINGLE_BAR
@@ -435,7 +435,7 @@ int first =1;
                         if (nb_threads == 1)
                             progress.set(NbRead);
                         else
-                            progress.inc(10000,tid);
+                            progress.inc(table_print_frequency,tid);
 #endif
                 }
             } //end while
@@ -518,7 +518,7 @@ int first =1;
 #if OMP
             tid = omp_get_thread_num();
 #endif
-first = 1;
+
             if (use_hashing_for_this_partition)
             {
                 // hash partition and save to solid file
@@ -529,13 +529,9 @@ first = 1;
                 {
                 	redundant_partitions_colour_file[p]-> read_element_buffered(&lkmer_colour) ;
                     hash.increment(lkmer, lkmer_colour);
-if(first){
-//	printf("%li\n", lkmer);
-//	first = 0;
-}
                     nkmers_read++;// Why not inside SINGLE_BAR??
 #if SINGLE_BAR
-                    if(verbose==0 && nkmers_read==10000)
+                    if(verbose==0 && nkmers_read==table_print_frequency)
                     {
                         if (nb_threads == 1)
                             progress.inc(nkmers_read*sizeof(kmer_type));
@@ -560,7 +556,7 @@ first = 1;
                     if(output_histo)
                     {
                         uint_abundance_t saturated_abundance;
-                        saturated_abundance = (abundance >= 10000) ? 10000 : abundance;
+                        saturated_abundance = (abundance >= table_print_frequency) ? table_print_frequency : abundance;
 #if OMP
                         histo_count_omp[tid][saturated_abundance]++;
 #else
@@ -608,7 +604,7 @@ first = 1;
                     kmers.push_back (lkmer);
                     nkmers_read++;
 #if SINGLE_BAR
-                    if(verbose==0 && nkmers_read==10000)
+                    if(verbose==0 && nkmers_read==table_print_frequency)
                     {
                         if (nb_threads == 1)
                             progress.inc(nkmers_read*sizeof(kmer_type));
@@ -636,7 +632,7 @@ first = 1;
                         if(output_histo)
                         {
                             uint_abundance_t saturated_abundance;
-                            saturated_abundance = (abundance >= 10000) ? 10000 : abundance;
+                            saturated_abundance = (abundance >= table_print_frequency) ? table_print_frequency : abundance;
 #if OMP
                             histo_count_omp[tid][saturated_abundance]++;
 #else
@@ -664,7 +660,7 @@ first = 1;
                 if(output_histo)
                 {
                     uint_abundance_t saturated_abundance;
-                    saturated_abundance = (abundance >= 10000) ? 10000 : abundance;
+                    saturated_abundance = (abundance >= table_print_frequency) ? table_print_frequency : abundance;
 #if OMP
                     histo_count_omp[tid][saturated_abundance]++;
 #else

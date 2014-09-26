@@ -21,6 +21,11 @@ OAHash::OAHash(uint64_t max_memory) // in bytes
     }
     nb_inserted_keys = 0;
     data = (element_pair *) calloc( hash_size, sizeof(element_pair));  //create hashtable
+	printf("%lld, %llu, %zu, %zu, %zu\n", max_memory, hash_size,
+			sizeof(element_pair), sizeof(element_pair_value),
+			sizeof(element_pair_colour));
+
+
 }
 
 OAHash::~OAHash()
@@ -136,6 +141,21 @@ void OAHash::insert(key_type graine, int value)
         nb_inserted_keys++;
     }
     element->value = value;
+
+}
+
+//if graine already here, overwrite old value
+void OAHash::insert(key_type graine, KmerColour colour)
+{
+    element_pair *element = find_slot(graine);
+    if (!is_occupied(element))
+    {
+        element->key = graine;
+        nb_inserted_keys++;
+    }
+    element->value = 1;
+    element->colour = colour;
+
 }
 
 // increment the value of a graine
@@ -148,7 +168,37 @@ void OAHash::increment(key_type graine)
         nb_inserted_keys++;
     }
     element->value = element->value + 1;
+//    printf("Hash::%u\t%u\n",element->value, element->colour);
 }
+
+void OAHash::increment(key_type graine, KmerColour colour) {
+
+	element_pair *element = find_slot(graine);
+	if (!is_occupied(element))
+	{
+		element->key = graine;
+		nb_inserted_keys++;
+	}
+	element->value = element->value + 1;
+	element-> colour = element-> colour  | 1 << colour;
+//	printf("Hash::%u\t%u\n",element->value, element->colour);
+
+
+}
+
+
+
+
+bool OAHash::get_colour( key_type graine, KmerColour *colour)
+{
+    element_pair *element = find_slot(graine);
+    if (!is_occupied(element))
+        return false;
+    if ((element->key) == graine && (colour != NULL))
+        *colour = element->colour;
+    return true;
+}
+
 
 bool OAHash::get( key_type graine, int * val)
 { 

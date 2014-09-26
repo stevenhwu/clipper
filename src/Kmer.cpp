@@ -17,8 +17,21 @@ kmer_type kmerMask;
 int NT2int(char nt)
 {
     int i;
-    i = nt;
+//    i = nt;
+//    printf("%d:",i);
+//    i=i>>1;
+//    printf("%d:",i);
+//    i=i&3;
+//    printf("%d:",i);
+    i=nt;
     i = (i>>1)&3; // that's quite clever, guillaume.
+//    A:0 C:1 T:2 G:3
+//71:35:3:G=3	1000111
+//84:42:2:T=2	1010100
+//67:33:1:C=1	1000011
+//65:32:0:A=0	1000001
+
+//    printf("%c=%d ",nt,i);
     return i;
 }
 
@@ -133,6 +146,7 @@ int first_nucleotide(kmer_type kmer)
     ttmath::UInt<KMER_PRECISION> t = kmer&3;
     t.ToInt(result);
 #else
+
     result = kmer&3;
 #endif
 #endif
@@ -149,13 +163,15 @@ int code2seq (kmer_type code, char *seq, int sizeKmer, kmer_type kmerMask)
     int i;
     kmer_type temp = code;
     char bin2NT[4] = {'A','C','T','G'};
-
+//    printf("code:%li\n",code);
     for (i=sizeKmer-1; i>=0; i--)
-    {
+    {//Some conversion convert kmer_type back to nuc
+
         seq[i]=bin2NT[first_nucleotide(temp&3)];
+//        printf("%c\t%li\t%li\t%li\n", seq[i], temp, temp&3 , temp>>2);
         temp = temp>>2;
     }
-    //printf("sizeKmer = %d\n", sizeKmer);
+//    printf("sizeKmer = %d\t%li\t%i\n", sizeKmer, code, temp);
     seq[sizeKmer]='\0';
     return sizeKmer;
 }
@@ -295,7 +311,10 @@ kmer_type next_kmer(kmer_type graine, int added_nt, int *strand)
     new_graine = (((temp_graine) * 4 )  + added_nt) & kmerMask;
     //new_graine = (((graine) >> 2 )  + ( ((kmer_type)added_nt) << ((sizeKmer-1)*2)) ) & kmerMask; // previous kmer
     kmer_type revcomp_new_graine = revcomp(new_graine);
-
+//XXX:DEBUG for unmatched kmer
+//    if(temp_graine == 2239396308425812948){
+//        	printf("%ld\t%d\t%ld\t%ld\n", temp_graine, added_nt, new_graine, revcomp_new_graine);
+//        }
     if (strand != NULL)
         *strand = (new_graine < revcomp_new_graine)?0:1;
 
@@ -368,5 +387,6 @@ char* print_kmer(kmer_type kmer)
 char* print_kmer(kmer_type kmer, int sizeKmer, kmer_type kmerMask)
 {
     code2seq(kmer,debug_kmer_buffer, sizeKmer, kmerMask);
+
     return debug_kmer_buffer;
 }

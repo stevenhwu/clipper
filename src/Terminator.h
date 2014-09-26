@@ -12,7 +12,7 @@
 #include "Kmer.h"
 #include "Set.h"
 #include "Bank.h"
-
+#include "Utils.h"
 class Terminator{
 
 protected:
@@ -33,7 +33,14 @@ public:
   bool is_branching(kmer_type graine);
   bool next(kmer_type *kmer);
 
-    Terminator(BinaryBank *given_SolidKmers, Bloom *given_bloom, Set *given_debloom) : SolidKmers(given_SolidKmers), bloom_solid_kmers(given_bloom), debloom(given_debloom) { }
+  const int print_branching_frequence = table_print_frequency;
+
+	Terminator(BinaryBank *given_SolidKmers, Bloom *given_bloom,
+			Set *given_debloom) :
+			SolidKmers(given_SolidKmers), bloom_solid_kmers(given_bloom), debloom(
+					given_debloom) {
+	}
+	virtual ~Terminator();
 };
 
 

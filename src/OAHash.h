@@ -4,6 +4,8 @@
 #include <inttypes.h>
 #include <stdint.h>
 
+#include "Kmer.h"
+
 #ifdef _largeint
 #include "LargeInt.h"
 typedef LargeInt<KMER_PRECISION> key_type;
@@ -23,13 +25,26 @@ typedef kmer_type key_type;
 class OAHash{
     
 protected:
-
+#pragma pack(4) //FUCK padding!!
     struct element_pair
     {
         key_type key;
         uint32_t value; 
+        KmerColour colour;
     };
-   
+#pragma pack(4)
+    struct element_pair_value {
+		key_type key;
+		uint32_t value;
+	};
+#pragma pack(4)
+	struct element_pair_colour {
+		key_type key;
+		KmerColour colour;
+//		int a;
+//		int b;
+//		int c;
+	};
 
     uint64_t hash_size;
     uint64_t nb_inserted_keys;
@@ -62,8 +77,11 @@ public:
     ~OAHash();
     element_pair * find_slot(key_type key);
     void insert(key_type graine, int value);
+    void insert(key_type graine, KmerColour colour);
     void increment(key_type graine);
+    void increment(key_type graine, KmerColour colour);
     bool get( key_type graine, int * val);
+    bool get_colour( key_type graine, KmerColour *colour);
     bool has_key(key_type graine);
     void printstat();
     uint64_t memory_usage();

@@ -14,8 +14,6 @@ uint64_t n_false_positives=0;
 
 Hash16 * hasht1;
 
-extern const int table_print_frequency;
-
 void end_debloom_partition(bool last_partition)
 {
 
@@ -111,7 +109,7 @@ int debloom(int order, int max_memory)
                     // what would have been needed if i decided to enable order>0 (but actually this won't happen): 
                     //  - better estimate of structure size in the presence of order>0 deblooming  
                     if (order == 1)  // this case just detects tips
-                    {printf("ORDER==1");
+                    {
                         bool is_linked = false;
                         for(int tip_nt=0; tip_nt<4; tip_nt++) 
                         {
@@ -128,7 +126,7 @@ int debloom(int order, int max_memory)
                     }
     
                     if (order > 1) // general case. should work for order = 1, but i coded an optimized version above
-                    { printf("ORDER>1");
+                    { 
                         Frontline frontline( new_graine, current_strand, bloo1, NULL, NULL, NULL);
                         while (frontline.depth < order)
                         {
@@ -154,7 +152,7 @@ int debloom(int order, int max_memory)
             }
         }
         NbSolidKmer++;
-        if ((NbSolidKmer%table_print_frequency)==0) fprintf (stderr,"%c Writing positive Bloom Kmers %lld",13,NbSolidKmer);
+        if ((NbSolidKmer%10000)==0) fprintf (stderr,"%c Writing positive Bloom Kmers %lld",13,NbSolidKmer);
     }
     nbkmers_solid =  NbSolidKmer; // GUS: it's global now
 
@@ -191,7 +189,7 @@ int debloom(int order, int max_memory)
         hasht1->add(kmer);
 
         NbSolidKmer++;
-        if ((NbSolidKmer%table_print_frequency)==0) fprintf (stderr,"%cBuild Hash table %lld",13,NbSolidKmer);
+        if ((NbSolidKmer%10000)==0) fprintf (stderr,"%cBuild Hash table %lld",13,NbSolidKmer);
 
         if(hasht1->nb_elem >max_kmer_per_part) //end partition,  find false positives
         {
@@ -280,7 +278,7 @@ Set *load_false_positives()
 
         NbInsertedKmers++;
 
-        if ((NbInsertedKmers%table_print_frequency)==0) fprintf (stderr,(char*)"%cInsert false positive Kmers in hash table %lld",13,NbInsertedKmers);
+        if ((NbInsertedKmers%10000)==0) fprintf (stderr,(char*)"%cInsert false positive Kmers in hash table %lld",13,NbInsertedKmers);
     }
     fp->finalize(); // always call this when finishing to create a FPSet
 
@@ -334,7 +332,7 @@ Set *load_false_positives_cascading4()
     fp->bloom2->add(kmer);
     
     NbInsertedKmers++;
-    if ((NbInsertedKmers%table_print_frequency)==0)
+    if ((NbInsertedKmers%10000)==0) 
       fprintf (stderr,"%cInsert false positive B2 %lld",13,NbInsertedKmers);
   }
   fprintf (stderr,"%cInsert false positive B2 %lld", 13,NbInsertedKmers);
@@ -363,7 +361,7 @@ Set *load_false_positives_cascading4()
     }
 
     NbInsertedKmers++;
-    if ((NbInsertedKmers% table_print_frequency)==0)
+    if ((NbInsertedKmers%10000)==0) 
       fprintf (stderr,(char*)"%cInsert false positive B3 %lld",13,NbInsertedKmers);
   }
   fprintf (stderr,(char*)"%cInsert false positive B3 %lld",13,NbInsertedKmers);
@@ -387,7 +385,7 @@ Set *load_false_positives_cascading4()
     }
 
     NbInsertedKmers++;
-    if ((NbInsertedKmers%table_print_frequency)==0)
+    if ((NbInsertedKmers%10000)==0) 
       fprintf (stderr,"%cInsert false positive B4 %lld",13,NbInsertedKmers);
   }
   fprintf (stderr,"%cInsert false positive B4 %lld", 13,NbInsertedKmers);
@@ -416,7 +414,7 @@ Set *load_false_positives_cascading4()
     }
 
     NbInsertedKmers++;
-    if ((NbInsertedKmers%table_print_frequency)==0)
+    if ((NbInsertedKmers%10000)==0) 
       fprintf (stderr,"%cInsert false positive T4 %lld",13,NbInsertedKmers);
   }
   fp->false_positives->finalize();

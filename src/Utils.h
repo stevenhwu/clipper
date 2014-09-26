@@ -28,7 +28,7 @@ using namespace std;
 extern struct timeval tim;
 #define STARTWALL(TT) \
 gettimeofday(&tim, NULL);\
-double wdebut  ## TT =tim.tv_sec +(tim.tv_usec/1000000.0);
+double wdebut  ## TT =tim.tv_sec +(tim.tv_usec/1000000.0); 
 
 
 #define STOPWALL(TT,MESSAGE)				\
@@ -54,8 +54,6 @@ extern const char *histo_file_name ;//= (char *)"histo";
 extern const char *breakpoints_file_name; // = (char *)"breakpoints";
 extern const char *assoc_kmer_file ;
 
-extern const char *solid_kmers_colour_file;// = (char *)"solid_kmers_colour_binary";
-extern const char *assembly_colour_file;// = (char *)"contigs_colour.fa";
 
 char *return_file_name(const char *suffix);
 
@@ -73,7 +71,6 @@ template<typename T,typename U>void bloom_pass_reads(Bank *Sequences,T *bloom_to
 
 float needleman_wunch(string a, string b);
 
-extern const int table_print_frequency;
 
 class Progress
 {

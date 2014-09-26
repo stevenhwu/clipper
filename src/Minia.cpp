@@ -10,16 +10,13 @@
 #include <vector> // for sorting_kmers
 #include <sys/time.h>
 
-#include <iterator>
-#include <iostream>
-using namespace std;
-
-
-
-
 #define NNKS 4 // default minimal abundance for solidity
 #define MIN_CONTIG_SIZE (2*sizeKmer+1)
 
+int max_memory; // the most memory one should alloc at any time, in MB
+
+int order = 0; // deblooming order; 0 = debloom everything; 1 = don't debloom 1-node tips (experimental, untested, shouldn't work);// (made extern int in Traversal.h)
+  
 #include "Bank.h"
 #include "Hash16.h"
 #include "Set.h"
@@ -32,15 +29,12 @@ using namespace std;
 #include "Kmer.h"
 #include "Traversal.h"
 #include "rvalues.h" // for 4bloom
-#include "Memory.h"
 
-int max_memory; // the most memory one should alloc at any time, in MB
-int order = 0; // deblooming order; 0 = debloom everything; 1 = don't debloom 1-node tips (experimental, untested, shouldn't work);// (made extern int in Traversal.h)
 
 int64_t genome_size;
 Bloom * bloo1;
 
-int max_colour_count;
+
 inline void assemble()
 {
 
@@ -59,12 +53,7 @@ inline void assemble()
 
     char *left_traversal  = (char *) malloc(maxlen*sizeof(char));
     char *right_traversal = (char *) malloc(maxlen*sizeof(char));
-    KmerColour *left_colour_traversal  = (KmerColour *) malloc(maxlen*sizeof(KmerColour));
-    KmerColour *right_colour_traversal = (KmerColour *) malloc(maxlen*sizeof(KmerColour));
-
     char *contig          = (char *) malloc(2*(maxlen+sizeKmer)*sizeof(char));
-    KmerColour *contig_colour   = (KmerColour *) malloc(2*(maxlen+sizeKmer)*sizeof(KmerColour));
-
     kmer_type kmer;
 
     long long nbContig =0;
@@ -74,11 +63,8 @@ inline void assemble()
     int64_t NbBranchingKmer=0;
     char kmer_seq[sizeKmer+1];
     FILE * file_assembly = fopen(return_file_name(assembly_file),"w+");
-    FILE * file_colour_assembly = fopen(return_file_name(assembly_colour_file),"w+");
-    BinaryBank *SolidKmers = new BinaryBank(return_file_name(solid_kmers_file),sizeof(kmer_type),0);
-    BinaryBank *solid_kmers_colour = new BinaryBank(return_file_name(solid_kmers_colour_file), kSizeOfKmerType+kSizeOfKmerColour, 0);
 
-    char colour_seq[1000];
+    BinaryBank *SolidKmers = new BinaryBank(return_file_name(solid_kmers_file),sizeof(kmer_type),0);
 
     STARTWALL(assembly);
 
@@ -89,22 +75,20 @@ inline void assemble()
     BranchingTerminator *terminator;
 
     if (LOAD_BRANCHING_KMERS)
-    {printf("LOA:%d\n",LOAD_BRANCHING_KMERS);
+    {
         BinaryBank *BranchingKmers = new BinaryBank(return_file_name(branching_kmers_file),sizeof(kmer_type),false);
         terminator = new BranchingTerminator(BranchingKmers,SolidKmers, bloo1,false_positives);
         BranchingKmers->close();
     }
-    else{
+    else
         terminator = new BranchingTerminator(SolidKmers,genome_size, bloo1,false_positives);
-        //TODO: BranchingTerminator using AssocSet, which might be greater than max_mem
-    }
+
     if (DUMP_BRANCHING_KMERS)
-    {printf("DUMP:%d\n",DUMP_BRANCHING_KMERS);
+    {
         BinaryBank *BranchingKmers = new BinaryBank(return_file_name(branching_kmers_file),sizeof(kmer_type),true);
         terminator->dump_branching_kmers(BranchingKmers);
         BranchingKmers->close();
     }
-    printf("Check boolean:%i\t%i\n", LOAD_BRANCHING_KMERS, DUMP_BRANCHING_KMERS);
 
 #ifdef UNITIG
     SimplePathsTraversal *traversal = new SimplePathsTraversal(bloo1,false_positives,terminator);
@@ -116,23 +100,17 @@ inline void assemble()
     traversal->set_maxlen(maxlen);
     traversal->set_max_depth(500);
     traversal->set_max_breadth(20);
-    traversal->SetSolidKmersColour(solid_kmers_colour, max_memory);
-    printf("Start outter while loop\n");
-    exit(-1);
+    
     while (terminator->next(&kmer))
     {
         // keep looping while a starting kmer is available from this kmer
 		// everything will be marked during the traversal()'s
 		kmer_type starting_kmer;
-		code2seq(kmer,kmer_seq); // convert
-//		printf("StartWhile, init Kmer:%li\t%s\n",kmer, kmer_seq);// Varified! kmer's matched seq from the original creation
 		while (traversal->find_starting_kmer(kmer,starting_kmer))
 //		while (traversal->find_starting_kmer_inside_simple_path(kmer,starting_kmer))
 		{
 		    code2seq(starting_kmer,kmer_seq); // convert starting kmer to nucleotide seq
-		    KmerColour kmer_colour = traversal->GetColour(starting_kmer);
 
-//		    printf("Starting_kmer:%lu %s",starting_kmer, kmer_seq);
             if (assemble_only_one_region != NULL)
             {
                 kmer_type dummy;
@@ -140,141 +118,57 @@ inline void assemble()
             }
 
             // right extension
-//            len_right = traversal->traverse(starting_kmer, right_traversal, 0);
-			len_right = traversal->traverse_colour(starting_kmer, right_traversal, right_colour_traversal, 0);
+            len_right = traversal->traverse(starting_kmer,right_traversal,0);
             mlenright= max(len_right,mlenright);
-            int debug=1;
-            if(debug>1){
-            	printf("RightSeq:%lld\t%s\n", len_right, right_traversal);
-            	kmer_colour_pattern_string(right_colour_traversal, len_right, colour_seq);
-				printf("RightColour:%s\n",colour_seq);
-            }
 
             // left extension, is equivalent to right extension of the revcomp
-//            len_left = traversal->traverse(starting_kmer, left_traversal, 1);
-            len_left = traversal->traverse_colour(starting_kmer, left_traversal,
-            										left_colour_traversal, 1);
+            len_left = traversal->traverse(starting_kmer,left_traversal,1);
             mlenleft= max(len_left,mlenleft);
 
             // form the contig
             revcomp_sequence(left_traversal,len_left);
-            KmerColourUtil::rev_colour(left_colour_traversal, len_left);
-
             strcpy(contig,left_traversal); // contig = revcomp(left_traversal)
 	        strcat(contig,kmer_seq);//               + starting_kmer
             strcat(contig,right_traversal);//           + right_traversal
-			contig_len=len_left+len_right+sizeKmer;
 
+            contig_len=len_left+len_right+sizeKmer;
 
-            int colour_len = 0;
-            KmerColour sep_colour = kErrorCode+1;// output with %x, so anything greater than 100;
-			colour_len = KmerColourUtil::append_colour(left_colour_traversal, len_left,
-					contig_colour, colour_len);
-			if(debug){
-				KmerColourUtil::append_colour(&sep_colour, 1, contig_colour,
-						colour_len);
-			}
-
-			KmerColourUtil::append_colour(&kmer_colour, 1, contig_colour,
-					colour_len);
-
-			if(debug){
-				KmerColourUtil::append_colour(&sep_colour, 1, contig_colour,
-										colour_len);
-			}
-
-			KmerColourUtil::append_colour(right_colour_traversal, len_right,
-					contig_colour, colour_len);
-
-
-            if(debug>1){
-            	printf("LeftSeq:%lld\t%s\n", len_left, left_traversal);
-            	kmer_colour_pattern_string(left_colour_traversal, len_left, colour_seq);
-				printf("LeftColour:%s\n",colour_seq);
-
-				printf("Kmer:%s\n",kmer_seq);
-				printf("KmerColour:%u\n",kmer_colour);
-				printf("Contig:%lld\t%s\n",contig_len ,contig);
-            }
-
-            std::string report("==========Summary==========\n");
-//			KmerColourUtil::summary(report, contig_colour, colour_len);
-//			KmerColourUtil::colour_table(report, contig_colour, colour_len, max_colour_count);
-//			printf("%s", report.data());
-
-			KmerColourSummary kcs(contig_colour, colour_len, max_colour_count);
-			kcs.summary_colour_code(report);
-			kcs.summary_colour_count(report);
-			kcs.summary_stat(report);
-			kcs.colour_table(report);
-//			printf("%s", report.data());
-//			delete &kcs;
-//			delete &kcs;
-//			printf("================END======================\n\n\n");
-			// save the contig
-            if(contig_len >= MIN_CONTIG_SIZE)//TODO: add colour info here
+            // save the contig
+            if(contig_len >= MIN_CONTIG_SIZE)
             {
                 max_contig_len = max(max_contig_len,contig_len);
                 fprintf(file_assembly,">%lli__len__%lli \n",nbContig,contig_len);
                 fprintf(file_assembly,"%s\n",contig);
-
-                fprintf(file_colour_assembly,">%lli__len__%lli \n",nbContig,contig_len);
-				fprintf(file_colour_assembly,"%s\n",contig);
-////				fprintf(file_colour_assembly,"%s\n",contig_colour);
-//				for (int i = 0; i < colour_len; ++i) {
-//					fprintf(file_colour_assembly, "%d", all_colour[i]);
-//				}
-//				fprintf(file_colour_assembly,"%s\n",report.data());
                 nbContig++;
                 totalnt+=contig_len;
             }
             if (assemble_only_one_region != NULL)
                 break;
-//            printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
-//exit(-1);
         }
-//		printf("Done while look is assemble()\n");
-//fclose(file_assembly);
-//fclose(file_colour_assembly);
-//exit(-2);
+    
         NbBranchingKmer++;
-        if ((NbBranchingKmer%300)==0) fprintf (stderr,"%cLooping through branching kmer n° %" PRId64 "/ %" PRId64 " total nt   %lli" ,13,NbBranchingKmer,terminator->nb_branching_kmers,totalnt );
+        if ((NbBranchingKmer%300)==0) fprintf (stderr,"%cLooping through branching kmer n° %lld / %lld  total nt   %lli   ",13,NbBranchingKmer,terminator->nb_branching_kmers,totalnt );
 
         if (nbContig > 0 && assemble_only_one_region != NULL)
             break;
 
     }
     fclose(file_assembly);
-    fclose(file_colour_assembly);
 
     fprintf (stderr,"\n Total nt assembled  %lli  nbContig %lli\n",totalnt,nbContig);
     fprintf (stderr,"\n Max contig len  %lli (debug: max len left %lli, max len right %lli)\n",max_contig_len,mlenleft,mlenright);
     
     STOPWALL(assembly,"Assembly");
 
-    SolidKmers->close();
-	solid_kmers_colour->close();
-
     free(left_traversal);
     free(right_traversal);
     free(contig);
-    free(left_colour_traversal);
-	free(right_colour_traversal);
-	free(contig_colour);
-
-    delete SolidKmers;
-    delete solid_kmers_colour;
-    delete terminator;
-    delete traversal;
-//	printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
-    printf("===========DONE=========EXIT========\n");
-//exit(-9);
+    SolidKmers->close();
 }
 
 int main(int argc, char *argv[])
 {
-    printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
-
+    
     if(argc <  6)
     {
         fprintf (stderr,"usage:\n");
@@ -336,7 +230,7 @@ int main(int argc, char *argv[])
         }
         if (sizeKmer>((int)sizeof(kmer_type)*4))
         {
-            printf("Max kmer size on this compiled version is %zu\n", sizeof(kmer_type)*4);
+            printf("Max kmer size on this compiled version is %d\n",sizeof(kmer_type)*4);
             exit(1);
         }
     }
@@ -375,7 +269,7 @@ int main(int argc, char *argv[])
        //max_memory = max( (1LL << estimated_bloom_size)/8LL /1024LL/1024LL, 1LL );
         max_memory =  max((int64_t) estimated_bloom_size/8LL /1024LL/1024LL,1LL);
 
-      printf("estimated values: nbits Bloom %" PRId64 ", nb FP %" PRId64 ", max memory %i MB\n",estimated_bloom_size,estimated_nb_FP,max_memory);
+      printf("estimated values: nbits Bloom %lli, nb FP %lld, max memory %i MB\n",estimated_bloom_size,estimated_nb_FP,max_memory);
 
     }
 
@@ -385,67 +279,49 @@ int main(int argc, char *argv[])
         strcpy(prefix,argv[5]);
     }
 
-//    printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
+   
 
 
-    fprintf (stderr,"taille cell %zu \n", sizeof(cell<kmer_type>));
+    fprintf (stderr,"taille cell %u \n", sizeof(cell<kmer_type>));
 
-    START_FROM_SOLID_KMERS=1; //TODO change back to 0
-	LOAD_FALSE_POSITIVE_KMERS = 1; //TODO: change back to 0 later
-	NO_FALSE_POSITIVES_AT_ALL = 1;//TODO: change back to 0 later
     STARTWALL(0);
-printf("argv[i]%s", argv[1]);
-    Bank *Reads = new Bank(argv[1]);
 
+    Bank *Reads = new Bank(argv[1]);
+    
     // counter kmers, write solid kmers to disk
     if (!START_FROM_SOLID_KMERS)
     {
-        int verbose = 2;
+        int verbose = 0;
         bool write_count = false;
         bool skip_binary_conversion = false;
-printf("==========START_FROM_SOLID_KMERS\n");
-		sorting_count(Reads, prefix, max_memory, max_disk_space, write_count,
-				verbose, skip_binary_conversion);
-	}
-    max_colour_count = Reads->nb_files;
+
+        sorting_count(Reads,prefix,max_memory,max_disk_space,write_count,verbose, skip_binary_conversion);
+    }
 
     // debloom, write false positives to disk, insert them into false_positives
-
     if (! LOAD_FALSE_POSITIVE_KMERS)
-    {printf("==========LOAD_FALSE_+ve_KMERS\n");//Don't think we need to add colour to this section, double check LATER
+    {
         debloom(order, max_memory);
     }
-    printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
+    
     bloo1 = bloom_create_bloo1((BloomCpt *)NULL, false);
 
+    if (! NO_FALSE_POSITIVES_AT_ALL)
+    {
+        // load false positives from disk into false_positives
+        if (!FOUR_BLOOM_VERSION) 
+            false_positives = load_false_positives();
+	else
+	    false_positives = load_false_positives_cascading4();
+    }
+    else
+    {
+        // titus mode: no FP's
+        false_positives = dummy_false_positives();
+    }
 
-//    FOUR_BLOOM_VERSION = 1;
-	if (!NO_FALSE_POSITIVES_AT_ALL) { //TODO: deal with this later, use dummy_false_positivies()
-		printf("===============NO_FALSE_+ve_KMERS\n");
-		// load false positives from disk into false_positives
-		if (!FOUR_BLOOM_VERSION){
-			printf("===============NoFourBloom\n");
-			false_positives = load_false_positives();
-		}
-		else{
-			printf("===============FourBloomVersion\n");
-			false_positives = load_false_positives_cascading4();
-		}
-	} else {
-		printf("=============else NO_FALSE_+ve_KMERS: titus mode\n");
-		// titus mode: no FP's
-		false_positives = dummy_false_positives();
-	}
-
-	assemble();
-//int count = 0;
-//while(getCurrentRSS() < 100000000){//Still sometihng not got destoryed
-//	printf("A:Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
-//	assemble();
-//	printf("B:Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
-//	count++;
-//	printf("Loop: %d\n", count);//4089 before error during fopen: $��K=  write 0  r3.solid_kmers_colour_binary
-//}
+    //  return 1;
+    assemble(); 
 
     STOPWALL(0,"Total");
 

@@ -17,10 +17,7 @@
 #include "Traversal.h" // for extensions() 
 
 using namespace::std;
-
 bool Terminator::verbose = true;
-
-Terminator::~Terminator(){}
 
 // common terminator functions (actually, more like Kmer64 + bloom + debloom)
 
@@ -62,7 +59,6 @@ unsigned char Terminator::branching_structure(kmer_type graine)
 // determines if a kmer is branching or not
 bool Terminator::is_branching(kmer_type graine)
 {
-	int order = 0;
     assert(graine<=revcomp(graine));
 
     // method specific to order=0 (remember that order>0 is never used)
@@ -258,38 +254,33 @@ bool BranchingTerminator::is_indexed(kmer_type graine)
 
 BranchingTerminator::BranchingTerminator(BinaryBank *given_SolidKmers, uint64_t genome_size, Bloom *given_bloom, Set *given_debloom) : Terminator(given_SolidKmers,given_bloom,given_debloom)
 {
-	kmer_type kmer;
-
-	// estimate, from the first million of kmers, the number of branching kmers, extrapolating given the estimated genome size
+    // estimate, from the first million of kmers, the number of branching kmers, extrapolating given the estimated genome size
     // TODO: erwan noticed that this code isn't useful anymore with AssocSet, feel free to remove it sometimes
-//    uint64_t nb_extrapolation = 3000000;
-//    SolidKmers->rewind_all();
-//    uint64_t nb_kmers = 0;
-//    nb_branching_kmers = 0;
-//
-//    uint64_t previous_estimated_nb_branching_kmers, estimated_nb_branching_kmers;
-//    while (SolidKmers->read_element(&kmer))
-//    {
-////    	printf("ReadKmer: %li\n", kmer);
-//        if (is_branching(kmer))
-//            nb_branching_kmers++;
-//
-//        if ((nb_branching_kmers%print_branching_frequence)==0 && nb_branching_kmers>0)
-//        {
-//            previous_estimated_nb_branching_kmers = estimated_nb_branching_kmers;
-//            estimated_nb_branching_kmers = (uint64_t)((1.0*nb_branching_kmers)/nb_kmers * genome_size);
-//            // minor todo: stop when previous_.. - estimated < threshold (pourquoi pas = 10% estimated)
-//            fprintf (stderr,"%cExtrapolating the number of branching kmers from the first %dM kmers: %lld",13,(int)ceilf(nb_extrapolation/1024.0/1024.0),estimated_nb_branching_kmers);
-//        }
-//
-//        if (nb_kmers++ == nb_extrapolation)
-//            break;
-//    }
-//
-//    estimated_nb_branching_kmers = (uint64_t)((1.0*nb_branching_kmers)/nb_kmers * genome_size); // final estimation
-//    int estimated_NBITS_TERMINATOR = max( (int)ceilf(log2f(estimated_nb_branching_kmers)), 1);
-//    printf("solidKmer:%lu forExtrapolating only. %d %d\n",nb_kmers,estimated_nb_branching_kmers ,estimated_NBITS_TERMINATOR);
-//    fprintf (stderr,"\n");
+    uint64_t nb_extrapolation = 3000000;
+    SolidKmers->rewind_all();
+    uint64_t nb_kmers = 0;
+    nb_branching_kmers = 0;
+    kmer_type kmer;
+    uint64_t previous_estimated_nb_branching_kmers, estimated_nb_branching_kmers;
+    while (SolidKmers->read_element(&kmer))
+    {
+        if (is_branching(kmer))
+            nb_branching_kmers++;
+
+        if ((nb_branching_kmers%1000)==0 && nb_branching_kmers>0)
+        {
+            previous_estimated_nb_branching_kmers = estimated_nb_branching_kmers;
+            estimated_nb_branching_kmers = (uint64_t)((1.0*nb_branching_kmers)/nb_kmers * genome_size);
+            // minor todo: stop when previous_.. - estimated < threshold (pourquoi pas = 10% estimated)
+            fprintf (stderr,"%cExtrapolating the number of branching kmers from the first %dM kmers: %lld",13,(int)ceilf(nb_extrapolation/1024.0/1024.0),estimated_nb_branching_kmers);
+        }
+
+        if (nb_kmers++ == nb_extrapolation)
+            break;
+    }
+    estimated_nb_branching_kmers = (uint64_t)((1.0*nb_branching_kmers)/nb_kmers * genome_size); // final estimation
+    int estimated_NBITS_TERMINATOR = max( (int)ceilf(log2f(estimated_nb_branching_kmers)), 1);
+    fprintf (stderr,"\n");
 
     // call Hash16 constructor
     // branching_kmers = new Hash16(estimated_NBITS_TERMINATOR);
@@ -309,15 +300,9 @@ BranchingTerminator::BranchingTerminator(BinaryBank *given_SolidKmers, uint64_t 
         }
 
         nb_solid_kmers++;
-		if ((nb_branching_kmers % table_print_frequency) == 0 && nb_branching_kmers>0)
-//			fprintf(stderr, "%cIndexing branching kmers %lld / ~%lld", 13, nb_branching_kmers, estimated_nb_branching_kmers);
-			fprintf(stderr, "%cIndexing branching kmers %lld", 13, nb_branching_kmers);
+        if ((nb_branching_kmers%500)==0) fprintf (stderr,"%cIndexing branching kmers %lld / ~%lld",13,nb_branching_kmers,estimated_nb_branching_kmers);
     }
-    off_t nbElements = SolidKmers->nb_elements();
 
-
-
-    printf("solidKmer take2:%lu\t%zd\t%d\n",nb_solid_kmers, nbElements, SolidKmers->get_sizeElement());
     if (nb_branching_kmers == 0)
         printf("\n**** Warning\n\nNo branching kmers were found in this dataset (it is either empty or a tiny circular genome) - Minia will not assemble anything.\n\n****\n\n");
 
@@ -357,7 +342,6 @@ BranchingTerminator::BranchingTerminator(BinaryBank *branchingKmers, BinaryBank 
 
 BranchingTerminator::~BranchingTerminator()
 {
-	printf("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n");
     delete branching_kmers;
 }
 

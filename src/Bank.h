@@ -34,7 +34,6 @@ typedef struct
     bool eof;
     char last_char;
     char *fname;
-    KmerColour file_colour; // use one colour per file as default
 } buffered_file_t;
 
 typedef struct 
@@ -53,15 +52,11 @@ class Bank{
         void init(char **fname, int nb_files_);
         void close();
 
-        bool get_next_seq_colour(char **nseq, int *len, KmerColour *col);
-//        bool get_next_seq_colour(char **nseq, int *len, int *col);
         bool get_next_seq(char **nseq, int *len);
         bool get_next_seq_from_file(char **nseq, int *len, int file_id);
     
-        bool get_next_seq_from_file(char **nseq, char **cheader, int *len, int *hlen, int file_id, KmerColour *col);
-        bool get_next_seq(char **nseq, char **cheader, int *len, int *hlen, KmerColour *col);
-//        bool get_next_seq_from_file(char **nseq, char **cheader, int *len, int *hlen, int file_id, int *col);
-//		bool get_next_seq(char **nseq, char **cheader, int *len, int *hlen, int *col);
+        bool get_next_seq_from_file(char **nseq, char **cheader, int *len, int *hlen, int file_id);
+        bool get_next_seq(char **nseq, char **cheader, int *len, int *hlen);
 
         void open_stream(int i); // internal functions
         void close_stream(int i);
@@ -92,14 +87,13 @@ class Bank{
 
 class BinaryBank
 {
-	protected:
+    protected:
         char filename[TAILLE_NOM];
         FILE * binary_read_file;
         const int sizeElement;
         void * buffer;
         int cpt_buffer;
     int buffer_size_nelem;
-
     public:
         BinaryBank(char *filename, int sizeElement, bool write);
         BinaryBank ();
@@ -115,11 +109,6 @@ class BinaryBank
         void close();
         void open(bool write);
         off_t nb_elements();
-
-        size_t ReadKmer( void *element);
-        size_t ReadColour( void *element);
-
-        int get_sizeElement(){ return sizeElement; };
         ~BinaryBank();
 
 };
@@ -199,6 +188,5 @@ class KmersBuffer
 };
 
 void  compute_kmer_table_from_one_seq(int readlen, char * seq, kmer_type * kmer_table )  ;
-void  compute_kmer_table_from_one_seq_colour(int readlen, char * seq, kmer_type * kmer_table, KmerColour readColour, KmerColour *kmer_table_colour );
 
 #endif

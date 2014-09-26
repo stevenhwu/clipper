@@ -12,7 +12,7 @@ bool clear_cache = false; // clear file cache from memory (for timing only)
 bool hybrid_mode = false;
 bool use_hashing = true; // use hashing instead of sorting (better control of memory)
 float load_factor = 0.7;
-bool use_compressed_reads = false;//true ; // true; // write compressed read file
+bool use_compressed_reads = true ; // true; // write compressed read file
 int optimism = 1; // optimism == 1 mean that we garantee worst case the memory usage, any value above assumes that, on average, a k-mer will be seen 'optimism' times
 
 bool output_histo;
@@ -27,7 +27,7 @@ bool output_histo;
 //           - the very first four bytes of the result file are the kmer length
 void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_space, bool write_count, int verbose, bool skip_binary_conversion)
 {
-int first =1;
+
     // create a temp dir from the prefix
     char temp_dir[1024];
     sprintf(temp_dir,"%s_temp",prefix);
@@ -127,14 +127,12 @@ int first =1;
     uint64_t total_IO =   volume * 2LL * 1024LL*1024LL   ;// in bytes  +   nb_passes * ( volume / (sizeof(kmer_type)*4) )    ; // in bytes
     uint64_t temp_IO = 0;
     //if (nb_passes==1) use_compressed_reads=false;
-    BinaryBankConcurrent * redundant_partitions_file[nb_partitions];
-    BinaryBankConcurrent * redundant_partitions_colour_file[nb_partitions];
+    BinaryBankConcurrent * redundant_partitions_file[nb_partitions]; 
     char redundant_filename[nb_partitions][256];
-    char redundant_colour_filename[nb_partitions][256];
     kmer_type kmer;
     int max_read_length = KMERSBUFFER_MAX_READLEN;
     kmer_type * kmer_table_seq = (kmer_type * ) malloc(sizeof(kmer_type)*max_read_length); ;
-    KmerColour * kmer_table_col = (KmerColour * ) malloc(sizeof(kmer_type)*max_read_length); ;
+
 
     fprintf(stderr,"Sequentially counting ~%llu MB of kmers with %d partition(s) and %d passes using %d thread(s), ~%d MB of memory and ~%d MB of disk space\n", (unsigned long long)volume, nb_partitions,nb_passes, nb_threads, max_memory * nb_threads, max_disk_space);
 
@@ -143,10 +141,6 @@ int first =1;
     mkdir(temp_dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
     BinaryBankConcurrent * SolidKmers = new BinaryBankConcurrent(return_file_name(solid_kmers_file),sizeof(kmer),true,nb_threads);
-	BinaryBankConcurrent * solid_kmers_colour = new BinaryBankConcurrent(
-			return_file_name(solid_kmers_colour_file),
-			kSizeOfKmerType + kSizeOfKmerColour , true, nb_threads);
-//			kSizeOfKmerType , true, nb_threads);
 
     if (write_count)
     {
@@ -156,11 +150,10 @@ int first =1;
         SolidKmers->write_buffered(&sizeKmer, 4,0);
         SolidKmers->flush(0);
     }
+
     int64_t estimated_NbReads = Sequences->estimate_nb_reads();
     char * rseq;
     int readlen;
-    KmerColour read_colour;
-
     int64_t NbSolid = 0;
     int64_t * NbSolid_omp = (int64_t  *) calloc(nb_threads,sizeof(int64_t));
     //long total_kmers_per_partition[nb_partitions]; //guillaume probably commented it because updating this variable would require synchronization
@@ -199,19 +192,15 @@ int first =1;
         binread = new BinaryReads(return_file_name(binary_read_file),true);
 
         Sequences->rewind_all();
-
         while(1)
         {
-            if(! Sequences->get_next_seq_colour(&rseq, &readlen, &read_colour)) break; // read  original fasta file
-
-
+            if(! Sequences->get_next_seq(&rseq,&readlen)) break; // read  original fasta file
             if(readlen > max_read_length) // realloc kmer_table_seq if needed
             {
                 max_read_length = 2*readlen;
                 kmer_table_seq = (kmer_type * ) realloc(kmer_table_seq,sizeof(kmer_type)*max_read_length);
-                kmer_table_col = (KmerColour * ) realloc(kmer_table_col, kSizeOfKmerColour*max_read_length);
             }
-
+            
             pt_begin = rseq;
             
             //should be ok
@@ -229,19 +218,19 @@ int first =1;
                 {
                     idx++;
                 }
+                
                 //we have a seq beginning at  pt_begin of size idx  ,without any N, will be treated as a read:
                 binread->write_read(pt_begin,idx);
                 pt_begin += idx;
-
             }
             
             // binread->write_read(rseq,readlen);
             
             
             NbRead++;
-            if ((NbRead%table_print_frequency)==0)
+            if ((NbRead%10000)==0)
             {
-                progress_conversion.inc(table_print_frequency);
+                progress_conversion.inc(10000);
             }
         }
         progress_conversion.finish();
@@ -284,9 +273,7 @@ int first =1;
         for (uint32_t p=0;p<nb_partitions;p++)
         {
             sprintf(redundant_filename[p],"%s/partition%d.redundant_kmers",temp_dir,p);
-            sprintf(redundant_colour_filename[p],"%s/partition%d.redundant_kmers_colour",temp_dir,p);
             redundant_partitions_file[p] =  new BinaryBankConcurrent (redundant_filename[p],sizeof(kmer_type),true, nb_threads);
-            redundant_partitions_colour_file[p] =  new BinaryBankConcurrent (redundant_colour_filename[p], kSizeOfKmerColour, true, nb_threads);
             distinct_kmers_per_partition[p]=0;
         }
 
@@ -340,12 +327,11 @@ int first =1;
                 }
                 else
                 {
-                    if(! Sequences->get_next_seq_colour(&rseq, &readlen, &read_colour)) break; // read  original fasta file
+                    if(! Sequences->get_next_seq(&rseq,&readlen)) break; // read  original fasta file
                     if(readlen > max_read_length) // realloc kmer_table_seq if needed
                     {
                         max_read_length = 2*readlen;
                         kmer_table_seq = (kmer_type * ) realloc(kmer_table_seq,sizeof(kmer_type)*max_read_length);
-                        kmer_table_col = (KmerColour * ) realloc(kmer_table_col,kSizeOfKmerColour*max_read_length);
                     }
                 }
 
@@ -364,8 +350,7 @@ int first =1;
                 } 
                 else //old fashion
                 {
-//                    compute_kmer_table_from_one_seq(readlen,rseq,kmer_table_seq, kmer_table_col);
-                	compute_kmer_table_from_one_seq_colour(readlen,rseq,kmer_table_seq, read_colour, kmer_table_col);
+                    compute_kmer_table_from_one_seq(readlen,rseq,kmer_table_seq);
                     nbkmers =readlen-sizeKmer+1;
                     kmer_table = kmer_table_seq;
                     NbRead++;
@@ -373,17 +358,13 @@ int first =1;
 
                 nbkmers_written= 0;
                 //compute the kmers stored in the buffer kmer_table
-
                 for (i=0; i<nbkmers; i++)
                 {
                     kmer_type lkmer;
-                    KmerColour lkmer_colour;
 
                     // kmer = extractKmerFromRead(rseq,i,&graine,&graine_revcomp);
-//                    printf("A1:%d_A2:%d\n", &kmer_table[i], &kmer_table_seq[i]); TRUE, why declare kmer_table??
-//                    lkmer = kmer_table_seq[i];//kmer_table[i];
+
                     lkmer = kmer_table[i];
-                    lkmer_colour = kmer_table_col[i];
 
                     // some hashing to uniformize repartition
                     kmer_type kmer_hash = lkmer ^ (lkmer >> 14);
@@ -397,6 +378,7 @@ int first =1;
                     // check if this kmer should be included in the current pass
                     if ((kmer_hash % nb_passes  ) != current_pass) 
                         continue;
+
                     kmer_type reduced_kmer = kmer_hash / nb_passes;
 
                     int p;// compute in which partition this kmer falls into
@@ -408,9 +390,8 @@ int first =1;
 #endif
 
                     nbkmers_written++;
-//                    printf("%u\n",lkmer_colour);
+
                     redundant_partitions_file[p]->write_element_buffered(&lkmer,tid); // save this kmer to the right partition file
-                    redundant_partitions_colour_file[p]->write_element_buffered(&lkmer_colour,tid); // save this kmer to the right partition file
                     // total_kmers_per_partition[p]++; // guillaume probably commented it because updating this variable would require synchronization
 
                 }
@@ -425,9 +406,9 @@ int first =1;
                 }
 #endif
              //   if ((NbRead%10000)==0)
-                if(tempread> table_print_frequency)
+                if(tempread> 10000)
                 {
-                    tempread -= table_print_frequency;
+                    tempread -= 10000;
                     if (verbose)
                         fprintf (stderr,"%cPass %d/%d, loop through reads to separate (redundant) kmers into partitions, processed %lluM reads out of %lluM",13,current_pass+1,nb_passes,(unsigned long long)(NbRead/1000/1000),(unsigned long long)(estimated_NbReads/1000/1000));
 #if !SINGLE_BAR
@@ -435,11 +416,11 @@ int first =1;
                         if (nb_threads == 1)
                             progress.set(NbRead);
                         else
-                            progress.inc(table_print_frequency,tid);
+                            progress.inc(10000,tid);
 #endif
                 }
             } //end while
-            printf("kmer/type/colour_sizeof:%d\t%d\t%d\n", sizeof(kmer), sizeof(kmer_type), kSizeOfKmerColour);
+
             if(use_compressed_reads)
                 delete kbuff;
         } // end OMP 
@@ -459,7 +440,7 @@ int first =1;
         }
 #endif
         
-        if (verbose)fprintf(stderr,"1\n");
+        if (verbose)fprintf(stderr,"\n");
 
         if (verbose >= 2)
         {
@@ -473,8 +454,6 @@ int first =1;
             {
                 redundant_partitions_file[p]->close();
                 redundant_partitions_file[p]->open(false);
-                redundant_partitions_colour_file[p]->close();
-				redundant_partitions_colour_file[p]->open(false);
             }
 
 
@@ -497,15 +476,12 @@ int first =1;
         //omp_set_numthreads(2);  //num_threads(2) //if(!output_histo) num_threads(nb_threads)
 #pragma omp parallel for private (p)  num_threads(nb_threads)
 #endif        
-
         // load, sort each partition to output solid kmers
         for (int p=0;p<nb_partitions;p++)
         {
             kmer_type lkmer;
-            KmerColour lkmer_colour;
             
             bool use_hashing_for_this_partition = use_hashing;
-//            printf("max mem %i MB  ,   parti size %i MB\n",max_memory,(redundant_partitions_file[p]->nb_elements()*sizeof(kmer_type))/1024LL/1024LL);
             if(hybrid_mode)
             {
               //  printf("max mem %i MB  ,   parti size %i MB\n",max_memory,(redundant_partitions_file[p]->nb_elements()*sizeof(kmer_type))/1024LL/1024LL);
@@ -518,7 +494,7 @@ int first =1;
 #if OMP
             tid = omp_get_thread_num();
 #endif
-
+            
             if (use_hashing_for_this_partition)
             {
                 // hash partition and save to solid file
@@ -527,11 +503,10 @@ int first =1;
                 
                 while (redundant_partitions_file[p]->read_element_buffered (&lkmer))
                 {
-                	redundant_partitions_colour_file[p]-> read_element_buffered(&lkmer_colour) ;
-                    hash.increment(lkmer, lkmer_colour);
-                    nkmers_read++;// Why not inside SINGLE_BAR??
+                    hash.increment(lkmer);
+                    nkmers_read++;
 #if SINGLE_BAR
-                    if(verbose==0 && nkmers_read==table_print_frequency)
+                    if(verbose==0 && nkmers_read==10000)
                     {
                         if (nb_threads == 1)
                             progress.inc(nkmers_read*sizeof(kmer_type));
@@ -544,55 +519,41 @@ int first =1;
                 
                 //single bar
                 
-first = 1;
+                
                 if (verbose >= 2)
                     printf("Pass %d/%d partition %d/%d hash load factor: %0.3f\n",current_pass+1,nb_passes,p+1,nb_partitions,hash.load_factor());
-                int counter = 0;
+                
                 hash.start_iterator();
                 while (hash.next_iterator())
                 {
                     uint_abundance_t abundance = hash.iterator->value;
-//                    printf("Hash:key:%lu\tValue:%i Colour:%u\n",hash.iterator->key, hash.iterator->value, hash.iterator->colour);
                     if(output_histo)
                     {
                         uint_abundance_t saturated_abundance;
-                        saturated_abundance = (abundance >= table_print_frequency) ? table_print_frequency : abundance;
+                        saturated_abundance = (abundance >= 10000) ? 10000 : abundance;
 #if OMP
                         histo_count_omp[tid][saturated_abundance]++;
 #else
-                        printf("histo_count 0 1  2 %i %i %i \n",histo_count[0],histo_count[1],histo_count[2]);
+                        //printf("histo_count 0 1  2 %i %i %i \n",histo_count[0],histo_count[1],histo_count[2]);
                         
                         histo_count[saturated_abundance]++;
 #endif
                     }
-
                     if (abundance >= nks && abundance <= max_couv)
                     {
-                    	counter++;
-//if(first){
-//	first = 0;
-//	printf("fkey: %li\n", hash.iterator->key);
-//}
-//                		printf("K:%lu\t%hu\n",hash.iterator->key, hash.iterator->colour);
-
                         SolidKmers->write_element_buffered(&(hash.iterator->key),tid);
-//                        Save key only, no need for value/colour
-                        solid_kmers_colour-> write_buffered(&(hash.iterator->key), kSizeOfKmerType, tid);
-//                        solid_kmers_colour->write_element_buffered(&(hash.iterator->key),tid);
-                        solid_kmers_colour-> write_buffered(&(hash.iterator->colour), kSizeOfKmerColour, tid);
+                        
                         NbSolid_omp[tid]++;
                         if (write_count)
                             SolidKmers->write_buffered(&abundance, sizeof(abundance),tid, false);
                         
                     }
                     distinct_kmers_per_partition[p]++;
-                }printf("Total:%i\n\n", counter);
+                }
             }
-            //In test dataset,
-//            4729+4653+4642+4592 = 18616 (unique)
-//            1252+1192+1165+1164 = 4773 (>min)
+            
             else
-            {//START non hash version
+            {
                 // sort partition and save to solid file
                 vector < kmer_type > kmers;
                 uint64_t nkmers_read=0;
@@ -604,7 +565,7 @@ first = 1;
                     kmers.push_back (lkmer);
                     nkmers_read++;
 #if SINGLE_BAR
-                    if(verbose==0 && nkmers_read==table_print_frequency)
+                    if(verbose==0 && nkmers_read==10000)
                     {
                         if (nb_threads == 1)
                             progress.inc(nkmers_read*sizeof(kmer_type));
@@ -632,7 +593,7 @@ first = 1;
                         if(output_histo)
                         {
                             uint_abundance_t saturated_abundance;
-                            saturated_abundance = (abundance >= table_print_frequency) ? table_print_frequency : abundance;
+                            saturated_abundance = (abundance >= 10000) ? 10000 : abundance;
 #if OMP
                             histo_count_omp[tid][saturated_abundance]++;
 #else
@@ -640,7 +601,6 @@ first = 1;
 #endif
                             
                         }
-
                         if (abundance >= nks  && abundance <= max_couv)
                         {
                             NbSolid_omp[tid]++;
@@ -660,7 +620,7 @@ first = 1;
                 if(output_histo)
                 {
                     uint_abundance_t saturated_abundance;
-                    saturated_abundance = (abundance >= table_print_frequency) ? table_print_frequency : abundance;
+                    saturated_abundance = (abundance >= 10000) ? 10000 : abundance;
 #if OMP
                     histo_count_omp[tid][saturated_abundance]++;
 #else
@@ -678,7 +638,7 @@ first = 1;
                     
                 }
                 
-            }//END non-hash verison, else{**}
+            }
             
             
             if (verbose >= 1)
@@ -697,8 +657,7 @@ first = 1;
             
             
             redundant_partitions_file[p]->close();
-			redundant_partitions_colour_file[p]->close();
-//            remove(redundant_filename[p]);
+            remove(redundant_filename[p]);
             
         } // end for partitions
 
@@ -741,8 +700,9 @@ first = 1;
             {
                 delete redundant_partitions_file[p] ;
             }
-	printf("End of pass %d END\n" ,current_pass+1);
+        
     }
+
     //single bar
 #if SINGLE_BAR
     if (verbose == 0 && nb_threads == 1)
@@ -771,9 +731,8 @@ first = 1;
 #endif
 
     SolidKmers->close();
-    solid_kmers_colour->close();
     printf("\nSaved %lld solid kmers\n",(long long)NbSolid);
-//    rmdir(temp_dir);//TODO add it back
+    rmdir(temp_dir);
 
     STOPWALL(count,"Counted kmers");
     fprintf(stderr,"\n------------------ Counted kmers and kept those with abundance >=%i,     \n",nks);

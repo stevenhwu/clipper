@@ -8,6 +8,7 @@
 using namespace std;
 Traversal::~Traversal()
 {
+	printf("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
 	delete hash;
 }
 
@@ -17,23 +18,10 @@ void Traversal::SetSolidKmersColour(BinaryBank *bank, int max_memory){
 
 	solid_kmers_colour->rewind_all();
 
-	long long int updated_max_emory = 7.5 * max_memory * 1024LL * 1024LL;
-	updated_max_emory  = 3354113 * 16;
-	hash = new OAHash(updated_max_emory);
-
-	/*TODO FIXME: 7 partitions, 6,7 fail. 7.5, 8,10 is ok
-	 * How to estimate this automatically?
-	 * nbit*sizeof(element_pair)??
-	 * Memory usage??if max == true max then we don't have enough memory
-	 * use Bloom/BloomCpt3 as counter??
-	 *
-	 */
+	hash = new OAHash(max_memory * 1024LL * 1024LL);
 	uint64_t nkmers_read = 0;
 	kmer_type lkmer;
 	KmerColour lkmer_colour;
-
-
-printf("Reading colour hash: mem:%lld\t %lld\n",updated_max_emory, (max_memory * 1024LL * 1024LL) );
 	while (solid_kmers_colour-> ReadKmer(&lkmer)) {
 		solid_kmers_colour-> ReadColour(&lkmer_colour);
 //		printf("K:%lu\t%hu\n", lkmer, lkmer_colour);
@@ -390,7 +378,7 @@ bool MonumentTraversal::find_starting_kmer(kmer_type branching_kmer, kmer_type &
         return false;
 
     if (debug) printf("getting new starting kmer\n");
-
+   
     for (int strand = 0; strand<2 ; strand++)
     {
         kmer_type previous_kmer = 0;
@@ -465,7 +453,6 @@ bool MonumentTraversal::find_starting_kmer(kmer_type branching_kmer, kmer_type &
                         
                     }
                     terminator = save_terminator;
-//                    save_terminator==NULL;
                 }
             }
             // update previous_kmer
@@ -483,9 +470,8 @@ bool MonumentTraversal::find_starting_kmer(kmer_type branching_kmer, kmer_type &
 
         if (debug) printf("strand %d depth %d\n",strand,frontline.depth);
         sum_depths += frontline.depth;
-//        delete &frontline;
     }
-
+    
     // don't even assemble those regions which have no chance to yield a long contig
     if (sum_depths < (sizeKmer+1))
         return false;
@@ -524,6 +510,7 @@ int Traversal::traverse(kmer_type starting_kmer, char* resulting_sequence, int s
         for (int cur_nt = 0; cur_nt < nnt; cur_nt++)
         {
             resulting_sequence[len_extension]=newNT[cur_nt];
+            //TODO: add resulting colour, from avance
 //            resulting_colour[len_extension]=newColour[cur_nt];
             len_extension++;
             previous_kmer = current_kmer;
@@ -786,7 +773,6 @@ int Traversal::simple_paths_avance_colour(kmer_type kmer, int strand, bool first
 		KmerColour second_kmer_colour;
 		KmerColour second_kmer_colour2;
 //		second_kmer_colour2 = GetColour(second_kmer);
-//		printf("In simple_paths_avance_colour\n");
 		GetColour(second_kmer, &second_kmer_colour);
 //		second_kmer_colour2 = 20;
 //		printf("k:%ld\tC:%u\t%u\t%d\t%p\t%d\n", second_kmer, second_kmer_colour, second_kmer_colour2, in_branching_degree, &second_kmer_colour, nb_extensions);
@@ -898,9 +884,6 @@ Frontline::Frontline(kmer_type starting_kmer, int starting_strand, Bloom *bloom,
 
     node first_node(starting_kmer,starting_strand,-1);
     frontline.push(first_node);
-}
-Frontline::~Frontline(){
-//printf("Called frontline destroyer\n");
 }
 
 bool Frontline::go_next_depth() 
@@ -1227,7 +1210,7 @@ bool MonumentTraversal::all_consensuses_almost_identical(set<string> consensuses
     }
     return true;
 }
-
+//TODO: implement here!!
 bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start_strand,
 		char *consensus, KmerColour *new_colour, int &consensus_length, kmer_type previous_kmer, set<kmer_type> *all_involved_extensions)
 {
@@ -1296,7 +1279,7 @@ bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start
 
     }
     else{
-    	printf("FAIL!! Not yet implemented");//TODO: Time to implement this!!
+    	printf("FAIL!! Not yet implemented");
     	for(set<string>::iterator c0 = consensuses.begin(); c0 != consensuses.end(); c0++) {
     	   string element = *c0;
     	}
@@ -1422,7 +1405,7 @@ char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand, bool f
     // * computing all possible paths between start and end
     // * returns one flattened consensus sequence
     int newNT_length;
-
+    //TODO: Hard to implement this one: explore_branching
     bool success = explore_branching_colour(kmer, current_strand, newNT, new_colour, newNT_length, previous_kmer);
 
     if(debug){
@@ -1437,7 +1420,6 @@ char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand, bool f
     return newNT_length;
 }
 
-MonumentTraversal::~MonumentTraversal()
-{
-
+MonumentTraversal::~MonumentTraversal(){
+	printf("}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}\n");
 }

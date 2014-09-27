@@ -409,7 +409,7 @@ uint64_t Bank::estimate_kmers_volume(int k)
 
     if ( gztell(buffered_file[index_file]->stream) == 0) // empty file
         return 1;
-
+//printf("IN estimate_kmers_volume:%lu total_filesize:%lu gztell:%lu %d\n", volume, filesizes, gztell(buffered_file[index_file]->stream) ,index_file);
     volume = (uint64_t) ( ( (float) volume ) * ( ( (float)filesizes ) / ((float) gztell(buffered_file[index_file]->stream)) ) );
 
     volume = volume / 1024 /1024 /8; // put it in MB

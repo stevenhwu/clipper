@@ -12,7 +12,7 @@ bool clear_cache = false; // clear file cache from memory (for timing only)
 bool hybrid_mode = false;
 bool use_hashing = true; // use hashing instead of sorting (better control of memory)
 float load_factor = 0.7;
-bool use_compressed_reads = false;//true ; // true; // write compressed read file
+bool use_compressed_reads = false;//true;default TRUE // true; // write compressed read file //TODO: change default
 int optimism = 1; // optimism == 1 mean that we garantee worst case the memory usage, any value above assumes that, on average, a k-mer will be seen 'optimism' times
 
 bool output_histo;
@@ -56,12 +56,15 @@ int first =1;
         printf("Available disk space in %s: %d MB\n",current_path,available); // not working in osx (is that a TODO then?)
         uint32_t input_size = max(1, (int)(( (double)(Sequences->filesizes) ) / 1024.0 / 1024.0));
         max_disk_space = min(available/2, input_size);
+        // half of total disk space or input file size, why min?? only make sense if ava<input
+
     } 
-    if (max_disk_space == 0) // still 0?
+    if (max_disk_space == 0) // still 0?//FIXME, not possible (==0) right??
         max_disk_space = 10000; // = default for osx
 
     // estimate number of iterations
     uint64_t volume = Sequences->estimate_kmers_volume(sizeKmer);
+
     uint32_t nb_passes = ( volume / max_disk_space ) + 1;
 
     
@@ -88,7 +91,11 @@ int first =1;
     {
         volume_per_pass = volume / nb_passes;
         nb_partitions = ( volume_per_pass / max_memory ) + 1;
-
+        if(verbose){
+        	printf("Initial estimation. volume:%llu nb_passes:%lu Volume_per_pass:%llu nb_partitions:%lu\n",
+        			volume, nb_passes, volume_per_pass, nb_partitions
+        			);
+        }
         // if partitions are hashed instead of sorted, adjust for load factor
         // (as in the worst case, all kmers in the partition are distinct and partition may be slightly bigger due to hash-repartition)
         if (use_hashing)
@@ -105,13 +112,14 @@ int first =1;
 
         if (verbose)
             printf("Estimate of number of partitions: %d, number of passes: %d\n",nb_partitions, nb_passes);
-        
+
         // get max number of open files
         struct rlimit lim;
         int max_open_files = 1000;
         int err = getrlimit(RLIMIT_NOFILE, &lim);
         if (err == 0)
             max_open_files = lim.rlim_cur / 2;
+        printf("Change nb_passes:%d %d\n",err, max_open_files);
         if (nb_partitions >= max_open_files)
         {
             if (verbose)
@@ -136,7 +144,10 @@ int first =1;
     kmer_type * kmer_table_seq = (kmer_type * ) malloc(sizeof(kmer_type)*max_read_length); ;
     KmerColour * kmer_table_col = (KmerColour * ) malloc(sizeof(kmer_type)*max_read_length); ;
 
-    fprintf(stderr,"Sequentially counting ~%llu MB of kmers with %d partition(s) and %d passes using %d thread(s), ~%d MB of memory and ~%d MB of disk space\n", (unsigned long long)volume, nb_partitions,nb_passes, nb_threads, max_memory * nb_threads, max_disk_space);
+    fprintf(stderr,"Sequentially counting ~%llu MB of kmers with %d partition(s) and %d"
+    		" passes using %d thread(s), ~%d MB of memory and ~%d MB of disk space\n",
+    		(unsigned long long)volume, nb_partitions,nb_passes, nb_threads,
+    		max_memory * nb_threads, max_disk_space);
 
     STARTWALL(count);
 
@@ -239,9 +250,12 @@ int first =1;
             
             
             NbRead++;
+
+
             if ((NbRead%table_print_frequency)==0)
             {
                 progress_conversion.inc(table_print_frequency);
+
             }
         }
         progress_conversion.finish();
@@ -425,11 +439,10 @@ int first =1;
                 }
 #endif
              //   if ((NbRead%10000)==0)
+
                 if(tempread> table_print_frequency)
                 {
                     tempread -= table_print_frequency;
-                    if (verbose)
-                        fprintf (stderr,"%cPass %d/%d, loop through reads to separate (redundant) kmers into partitions, processed %lluM reads out of %lluM",13,current_pass+1,nb_passes,(unsigned long long)(NbRead/1000/1000),(unsigned long long)(estimated_NbReads/1000/1000));
 #if !SINGLE_BAR
                     else
                         if (nb_threads == 1)
@@ -518,7 +531,7 @@ int first =1;
 #if OMP
             tid = omp_get_thread_num();
 #endif
-
+first = 1;
             if (use_hashing_for_this_partition)
             {
                 // hash partition and save to solid file
@@ -552,11 +565,10 @@ first = 1;
                 while (hash.next_iterator())
                 {
                     uint_abundance_t abundance = hash.iterator->value;
-//                    printf("Hash:key:%lu\tValue:%i Colour:%u\n",hash.iterator->key, hash.iterator->value, hash.iterator->colour);
                     if(output_histo)
                     {
                         uint_abundance_t saturated_abundance;
-                        saturated_abundance = (abundance >= table_print_frequency) ? table_print_frequency : abundance;
+                        saturated_abundance = (abundance >= 10000) ? 10000 : abundance;
 #if OMP
                         histo_count_omp[tid][saturated_abundance]++;
 #else

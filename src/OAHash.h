@@ -25,26 +25,14 @@ typedef kmer_type key_type;
 class OAHash{
     
 protected:
-#pragma pack(4) //FUCK padding!!
+
     struct element_pair
     {
         key_type key;
         uint32_t value; 
         KmerColour colour;
     };
-#pragma pack(4)
-    struct element_pair_value {
-		key_type key;
-		uint32_t value;
-	};
-#pragma pack(4)
-	struct element_pair_colour {
-		key_type key;
-		KmerColour colour;
-//		int a;
-//		int b;
-//		int c;
-	};
+   
 
     uint64_t hash_size;
     uint64_t nb_inserted_keys;

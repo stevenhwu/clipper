@@ -13,6 +13,9 @@
 #include "Set.h"
 #include "Bank.h"
 #include "Utils.h"
+
+const int print_branching_frequence = table_print_frequency;
+
 class Terminator{
 
 protected:
@@ -32,8 +35,6 @@ public:
   virtual void reset() {return;};
   bool is_branching(kmer_type graine);
   bool next(kmer_type *kmer);
-
-  const int print_branching_frequence = table_print_frequency;
 
 	Terminator(BinaryBank *given_SolidKmers, Bloom *given_bloom,
 			Set *given_debloom) :

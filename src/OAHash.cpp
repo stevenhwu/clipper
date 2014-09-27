@@ -21,11 +21,6 @@ OAHash::OAHash(uint64_t max_memory) // in bytes
     }
     nb_inserted_keys = 0;
     data = (element_pair *) calloc( hash_size, sizeof(element_pair));  //create hashtable
-	printf("%lld, %llu, %zu, %zu, %zu\n", max_memory, hash_size,
-			sizeof(element_pair), sizeof(element_pair_value),
-			sizeof(element_pair_colour));
-
-
 }
 
 OAHash::~OAHash()

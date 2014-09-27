@@ -94,10 +94,9 @@ inline void assemble()
         terminator = new BranchingTerminator(BranchingKmers,SolidKmers, bloo1,false_positives);
         BranchingKmers->close();
     }
-    else{
+    else
         terminator = new BranchingTerminator(SolidKmers,genome_size, bloo1,false_positives);
-        //TODO: BranchingTerminator using AssocSet, which might be greater than max_mem
-    }
+
     if (DUMP_BRANCHING_KMERS)
     {printf("DUMP:%d\n",DUMP_BRANCHING_KMERS);
         BinaryBank *BranchingKmers = new BinaryBank(return_file_name(branching_kmers_file),sizeof(kmer_type),true);
@@ -117,154 +116,170 @@ inline void assemble()
     traversal->set_max_depth(500);
     traversal->set_max_breadth(20);
     traversal->SetSolidKmersColour(solid_kmers_colour, max_memory);
-    printf("Start outter while loop\n");
-    exit(-1);
-    while (terminator->next(&kmer))
-    {
-        // keep looping while a starting kmer is available from this kmer
-		// everything will be marked during the traversal()'s
-		kmer_type starting_kmer;
-		code2seq(kmer,kmer_seq); // convert
-//		printf("StartWhile, init Kmer:%li\t%s\n",kmer, kmer_seq);// Varified! kmer's matched seq from the original creation
-		while (traversal->find_starting_kmer(kmer,starting_kmer))
-//		while (traversal->find_starting_kmer_inside_simple_path(kmer,starting_kmer))
-		{
-		    code2seq(starting_kmer,kmer_seq); // convert starting kmer to nucleotide seq
-		    KmerColour kmer_colour = traversal->GetColour(starting_kmer);
 
-//		    printf("Starting_kmer:%lu %s",starting_kmer, kmer_seq);
-            if (assemble_only_one_region != NULL)
-            {
-                kmer_type dummy;
-                starting_kmer = extractKmerFromRead(assemble_only_one_region,0,&kmer,&dummy,false);
-            }
-
-            // right extension
-//            len_right = traversal->traverse(starting_kmer, right_traversal, 0);
-			len_right = traversal->traverse_colour(starting_kmer, right_traversal, right_colour_traversal, 0);
-            mlenright= max(len_right,mlenright);
-            int debug=1;
-            if(debug>1){
-            	printf("RightSeq:%lld\t%s\n", len_right, right_traversal);
-            	kmer_colour_pattern_string(right_colour_traversal, len_right, colour_seq);
-				printf("RightColour:%s\n",colour_seq);
-            }
-
-            // left extension, is equivalent to right extension of the revcomp
-//            len_left = traversal->traverse(starting_kmer, left_traversal, 1);
-            len_left = traversal->traverse_colour(starting_kmer, left_traversal,
-            										left_colour_traversal, 1);
-            mlenleft= max(len_left,mlenleft);
-
-            // form the contig
-            revcomp_sequence(left_traversal,len_left);
-            KmerColourUtil::rev_colour(left_colour_traversal, len_left);
-
-            strcpy(contig,left_traversal); // contig = revcomp(left_traversal)
-	        strcat(contig,kmer_seq);//               + starting_kmer
-            strcat(contig,right_traversal);//           + right_traversal
-			contig_len=len_left+len_right+sizeKmer;
-
-
-            int colour_len = 0;
-            KmerColour sep_colour = kErrorCode+1;// output with %x, so anything greater than 100;
-			colour_len = KmerColourUtil::append_colour(left_colour_traversal, len_left,
-					contig_colour, colour_len);
-			if(debug){
-				KmerColourUtil::append_colour(&sep_colour, 1, contig_colour,
-						colour_len);
-			}
-
-			KmerColourUtil::append_colour(&kmer_colour, 1, contig_colour,
-					colour_len);
-
-			if(debug){
-				KmerColourUtil::append_colour(&sep_colour, 1, contig_colour,
-										colour_len);
-			}
-
-			KmerColourUtil::append_colour(right_colour_traversal, len_right,
-					contig_colour, colour_len);
-
-
-            if(debug>1){
-            	printf("LeftSeq:%lld\t%s\n", len_left, left_traversal);
-            	kmer_colour_pattern_string(left_colour_traversal, len_left, colour_seq);
-				printf("LeftColour:%s\n",colour_seq);
-
-				printf("Kmer:%s\n",kmer_seq);
-				printf("KmerColour:%u\n",kmer_colour);
-				printf("Contig:%lld\t%s\n",contig_len ,contig);
-            }
-
-            std::string report("==========Summary==========\n");
-//			KmerColourUtil::summary(report, contig_colour, colour_len);
-//			KmerColourUtil::colour_table(report, contig_colour, colour_len, max_colour_count);
-//			printf("%s", report.data());
-
-			KmerColourSummary kcs(contig_colour, colour_len, max_colour_count);
-			kcs.summary_colour_code(report);
-			kcs.summary_colour_count(report);
-			kcs.summary_stat(report);
-			kcs.colour_table(report);
-//			printf("%s", report.data());
-//			delete &kcs;
-//			delete &kcs;
-//			printf("================END======================\n\n\n");
-			// save the contig
-            if(contig_len >= MIN_CONTIG_SIZE)//TODO: add colour info here
-            {
-                max_contig_len = max(max_contig_len,contig_len);
-                fprintf(file_assembly,">%lli__len__%lli \n",nbContig,contig_len);
-                fprintf(file_assembly,"%s\n",contig);
-
-                fprintf(file_colour_assembly,">%lli__len__%lli \n",nbContig,contig_len);
-				fprintf(file_colour_assembly,"%s\n",contig);
-////				fprintf(file_colour_assembly,"%s\n",contig_colour);
-//				for (int i = 0; i < colour_len; ++i) {
-//					fprintf(file_colour_assembly, "%d", all_colour[i]);
-//				}
+//    while (terminator->next(&kmer))
+//    {
+//        // keep looping while a starting kmer is available from this kmer
+//		// everything will be marked during the traversal()'s
+//		kmer_type starting_kmer;
+//		code2seq(kmer,kmer_seq); // convert
+////		printf("StartWhile, init Kmer:%li\t%s\n",kmer, kmer_seq);// Varified! kmer's matched seq from the original creation
+//		while (traversal->find_starting_kmer(kmer,starting_kmer))
+////		while (traversal->find_starting_kmer_inside_simple_path(kmer,starting_kmer))
+//		{
+//		    code2seq(starting_kmer,kmer_seq); // convert starting kmer to nucleotide seq
+//		    KmerColour kmer_colour = traversal->GetColour(starting_kmer);
+//
+////		    printf("Starting_kmer:%lu %s",starting_kmer, kmer_seq);
+//            if (assemble_only_one_region != NULL)
+//            {
+//                kmer_type dummy;
+//                starting_kmer = extractKmerFromRead(assemble_only_one_region,0,&kmer,&dummy,false);
+//            }
+//
+//            // right extension
+////            len_right = traversal->traverse(starting_kmer, right_traversal, 0);
+//			len_right = traversal->traverse_colour(starting_kmer, right_traversal, right_colour_traversal, 0);
+//            mlenright= max(len_right,mlenright);
+//            int debug=1;
+//            if(debug>1){
+//            	printf("RightSeq:%lld\t%s\n", len_right, right_traversal);
+////            	printf("RightColour:");
+////            	for (int i = 0; i < len_right; ++i) {
+////            		printf("%u ",right_colour_traversal[i]);
+////				}
+//            	kmer_colour_pattern_string(right_colour_traversal, len_right, colour_seq);
+//				printf("RightColour:%s\n",colour_seq);
+//            }
+//
+//            // left extension, is equivalent to right extension of the revcomp
+////            len_left = traversal->traverse(starting_kmer, left_traversal, 1);
+//            len_left = traversal->traverse_colour(starting_kmer, left_traversal,
+//            										left_colour_traversal, 1);
+//            mlenleft= max(len_left,mlenleft);
+//
+//            // form the contig
+//
+////            printf("before Rev:%s\n",left_traversal);
+//            revcomp_sequence(left_traversal,len_left);
+//            KmerColourUtil::rev_colour(left_colour_traversal, len_left);
+//
+////            printf("after Rev:%s\n",left_traversal);
+//            strcpy(contig,left_traversal); // contig = revcomp(left_traversal)
+//	        strcat(contig,kmer_seq);//               + starting_kmer
+//            strcat(contig,right_traversal);//           + right_traversal
+//			contig_len=len_left+len_right+sizeKmer;
+//
+//
+//            int colour_len = 0;
+//            KmerColour sep_colour = kErrorCode+1;// output with %x, so anything greater than 100;
+//			colour_len = KmerColourUtil::append_colour(left_colour_traversal, len_left,
+//					contig_colour, colour_len);
+//			if(debug){
+//				KmerColourUtil::append_colour(&sep_colour, 1, contig_colour,
+//						colour_len);
+//			}
+////            memset(contig_colour+pt_len, (int) kmer_colour, kSizeOfKmerColour*sizeKmer);
+////            pt_len += sizeKmer;
+//
+//			KmerColourUtil::append_colour(&kmer_colour, 1, contig_colour,
+//					colour_len);
+//
+//			if(debug){
+//				KmerColourUtil::append_colour(&sep_colour, 1, contig_colour,
+//										colour_len);
+//			}
+//
+////            memcpy(contig_colour+colour_len, right_colour_traversal, len_right);
+////			colour_len += len_right;
+//			KmerColourUtil::append_colour(right_colour_traversal, len_right,
+//					contig_colour, colour_len);
+//
+//
+//            if(debug>1){
+//            	printf("LeftSeq:%lld\t%s\n", len_left, left_traversal);
+////            	printf("LeftColour:");
+////				for (int i = 0; i < len_left; ++i) {
+////					printf("%u ",left_colour_traversal[i]);
+////				}
+////				printf("\n");
+//            	kmer_colour_pattern_string(left_colour_traversal, len_left, colour_seq);
+//				printf("LeftColour:%s\n",colour_seq);
+//				printf("Kmer:%s\n",kmer_seq);
+//				printf("KmerColour:%u\n",kmer_colour);
+//				printf("Contig:%lld\t%s\n",contig_len ,contig);
+////				printf("Colour:");
+////				for (int i = 0; i < pt_len; ++i) {
+////					printf("%x", contig_colour[i]);
+////				}
+//
+////				printf("Colour:%d\t%s\n\n",pt_len+len_right ,contig_colour);
+//
+//
+//            }
+//
+//            std::string report("==========Summary==========\n");
+////			KmerColourUtil::summary(report, contig_colour, colour_len);
+////			KmerColourUtil::colour_table(report, contig_colour, colour_len, max_colour_count);
+////			printf("%s", report.data());
+//
+//			KmerColourSummary kcs(contig_colour, colour_len, max_colour_count);
+//			kcs.summary_colour_code(report);
+//			kcs.summary_colour_count(report);
+//			kcs.summary_stat(report);
+//			kcs.colour_table(report);
+////			printf("%s", report.data());
+////			delete &kcs;
+////			delete &kcs;
+////			printf("================END======================\n\n\n");
+//			// save the contig
+//            if(contig_len >= MIN_CONTIG_SIZE)//TODO: add colour info here
+//            {
+//                max_contig_len = max(max_contig_len,contig_len);
+//                fprintf(file_assembly,">%lli__len__%lli \n",nbContig,contig_len);
+//                fprintf(file_assembly,"%s\n",contig);
+//
+//                fprintf(file_colour_assembly,">%lli__len__%lli \n",nbContig,contig_len);
+//				fprintf(file_colour_assembly,"%s\n",contig);
+//////				fprintf(file_colour_assembly,"%s\n",contig_colour);
+////				for (int i = 0; i < colour_len; ++i) {
+////					fprintf(file_colour_assembly, "%d", all_colour[i]);
+////				}
 //				fprintf(file_colour_assembly,"%s\n",report.data());
-                nbContig++;
-                totalnt+=contig_len;
-            }
-            if (assemble_only_one_region != NULL)
-                break;
-//            printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
-//exit(-1);
-        }
-//		printf("Done while look is assemble()\n");
-//fclose(file_assembly);
-//fclose(file_colour_assembly);
-//exit(-2);
-        NbBranchingKmer++;
-        if ((NbBranchingKmer%300)==0) fprintf (stderr,"%cLooping through branching kmer n° %" PRId64 "/ %" PRId64 " total nt   %lli" ,13,NbBranchingKmer,terminator->nb_branching_kmers,totalnt );
-
-        if (nbContig > 0 && assemble_only_one_region != NULL)
-            break;
-
-    }
+//                nbContig++;
+//                totalnt+=contig_len;
+//            }
+//            if (assemble_only_one_region != NULL)
+//                break;
+////            printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
+////exit(-1);
+//        }
+////		printf("Done while look is assemble()\n");
+////fclose(file_assembly);
+////fclose(file_colour_assembly);
+////exit(-2);
+//        NbBranchingKmer++;
+//        if ((NbBranchingKmer%300)==0) fprintf (stderr,"%cLooping through branching kmer n° %" PRId64 "/ %" PRId64 " total nt   %lli" ,13,NbBranchingKmer,terminator->nb_branching_kmers,totalnt );
+//
+//        if (nbContig > 0 && assemble_only_one_region != NULL)
+//            break;
+//
+//    }
     fclose(file_assembly);
-    fclose(file_colour_assembly);
 
     fprintf (stderr,"\n Total nt assembled  %lli  nbContig %lli\n",totalnt,nbContig);
     fprintf (stderr,"\n Max contig len  %lli (debug: max len left %lli, max len right %lli)\n",max_contig_len,mlenleft,mlenright);
     
     STOPWALL(assembly,"Assembly");
 
-    SolidKmers->close();
-	solid_kmers_colour->close();
-
     free(left_traversal);
     free(right_traversal);
     free(contig);
-    free(left_colour_traversal);
-	free(right_colour_traversal);
-	free(contig_colour);
-
-    delete SolidKmers;
-    delete solid_kmers_colour;
-    delete terminator;
+    SolidKmers->close();
+    solid_kmers_colour->close();
+//    delete SolidKmers;
+//    delete solid_kmers_colour;
+//    delete terminator;
     delete traversal;
 //	printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
     printf("===========DONE=========EXIT========\n");
@@ -390,23 +405,25 @@ int main(int argc, char *argv[])
 
     fprintf (stderr,"taille cell %zu \n", sizeof(cell<kmer_type>));
 
-    START_FROM_SOLID_KMERS=1; //TODO change back to 0
-	LOAD_FALSE_POSITIVE_KMERS = 1; //TODO: change back to 0 later
-	NO_FALSE_POSITIVES_AT_ALL = 1;//TODO: change back to 0 later
+    START_FROM_SOLID_KMERS = 0; //TODO change back to 0 later
+    LOAD_FALSE_POSITIVE_KMERS = 1; //TODO: change back to 0 later
+    NO_FALSE_POSITIVES_AT_ALL = 0;//TODO: change back to 0 later
+
     STARTWALL(0);
-printf("argv[i]%s", argv[1]);
+printf("argv[1]:%s\n", argv[1]);
     Bank *Reads = new Bank(argv[1]);
 
     // counter kmers, write solid kmers to disk
     if (!START_FROM_SOLID_KMERS)
     {
-        int verbose = 2;
-        bool write_count = false;
-        bool skip_binary_conversion = false;
+        int verbose = 2; //default 0
+        bool write_count = false; //default false
+        bool skip_binary_conversion = false; //default false
 printf("==========START_FROM_SOLID_KMERS\n");
 		sorting_count(Reads, prefix, max_memory, max_disk_space, write_count,
 				verbose, skip_binary_conversion);
 	}
+    exit(-1);
     max_colour_count = Reads->nb_files;
 
     // debloom, write false positives to disk, insert them into false_positives
@@ -437,15 +454,23 @@ printf("==========START_FROM_SOLID_KMERS\n");
 		false_positives = dummy_false_positives();
 	}
 
+    //  return 1;
+int count = 0;
+while(getCurrentRSS() < 100000000){
+	printf("A:Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
 	assemble();
-//int count = 0;
-//while(getCurrentRSS() < 100000000){//Still sometihng not got destoryed
-//	printf("A:Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
-//	assemble();
-//	printf("B:Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
-//	count++;
-//	printf("Loop: %d\n", count);//4089 before error during fopen: $��K=  write 0  r3.solid_kmers_colour_binary
-//}
+	printf("B:Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
+	count++;
+}
+printf("Loop: %d\n", count);
+//    delete bloo1;
+//    printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
+//    delete Reads;
+//    printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
+//    delete false_positive_kmers_file;
+//    printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
+//    printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
+
 
     STOPWALL(0,"Total");
 

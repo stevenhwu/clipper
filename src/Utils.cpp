@@ -95,7 +95,9 @@ void bloom_pass_reads_binary(T *bloom_to_insert, BloomCpt *bloom_counter, char *
       bloom_to_insert->add(kmer);
       NbInsertedKmers++;
       NbRead++;
+
       if ((NbRead%table_print_frequency)==0) fprintf (stderr,stderr_message,13,(long long)NbRead);
+
     }
   fprintf (stderr,"\nInserted %lld %s kmers in the bloom structure.\n",(long long)NbInsertedKmers,"solid");
   SolidKmers->close();

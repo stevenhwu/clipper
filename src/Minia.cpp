@@ -405,11 +405,11 @@ int main(int argc, char *argv[])
 
     fprintf (stderr,"taille cell %zu \n", sizeof(cell<kmer_type>));
 
-    START_FROM_SOLID_KMERS = 1; //TODO change back to 0 later
-    LOAD_FALSE_POSITIVE_KMERS = 1; //TODO: change back to 0 later
+    START_FROM_SOLID_KMERS = 0; //TODO change back to 0 later
+    LOAD_FALSE_POSITIVE_KMERS = 0; //TODO: change back to 0 later
     NO_FALSE_POSITIVES_AT_ALL = 0;//TODO: change back to 0 later
-//    max_memory = 100;
-    max_disk_space = 1000;
+//    max_memory = 1000;
+//    max_disk_space = 10;
 
     STARTWALL(0);
 printf("argv[1]:%s\n", argv[1]);
@@ -425,7 +425,7 @@ printf("==========START_FROM_SOLID_KMERS\n");
 		sorting_count(Reads, prefix, max_memory, max_disk_space, write_count,
 				verbose, skip_binary_conversion);
 	}
-//exit(-1);
+
     max_colour_count = Reads->nb_files;
 
     // debloom, write false positives to disk, insert them into false_positives

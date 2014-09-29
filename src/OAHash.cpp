@@ -14,6 +14,7 @@ using namespace::std;
 OAHash::OAHash(uint64_t max_memory) // in bytes
 {
     hash_size = max_memory / sizeof(element_pair);
+
     if (hash_size == 0)
     {
         printf("empty OAHash allocated\n");
@@ -251,3 +252,7 @@ void OAHash::printstat()
     fprintf(stderr,"max elements: %lld, memory usage: %lld\n",(long long)hash_size,(long long)memory_usage());
     fprintf(stderr,"load factor: %.2f\n",load_factor());
 }   
+
+//size_t OAHash::get_sizeof_element_pair(){
+//	return sizeof(element_pair);
+//}

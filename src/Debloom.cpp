@@ -35,10 +35,16 @@ void end_debloom_partition(bool last_partition)
 	F_debloom_write = fopen(return_file_name("debloom2"),"wb+");
 	#endif
 
+	BinaryReads* file_false_positive_kmers_binary = NULL;
     if (last_partition)
     {   
         // write false positive kmers to fasta file
         file_false_positive_kmers = fopen(return_file_name(false_positive_kmers_file),"wb");
+        char *false_positive_kmers_binary_file = (char *)"false_positive_kmers_binary";
+
+        file_false_positive_kmers_binary = new BinaryReads(
+				return_file_name(false_positive_kmers_binary_file), true);
+		//TODO: change store FP into binary? reduce space?
     }
 
     n_false_positives = 0;
@@ -61,14 +67,17 @@ void end_debloom_partition(bool last_partition)
                 fprintf(file_false_positive_kmers,">fp\n");
                 fputs(false_positive_kmer_char,file_false_positive_kmers);
                 fprintf(file_false_positive_kmers,"\n");
+                file_false_positive_kmers_binary->write_read(false_positive_kmer_char, sizeKmer);
             }
         }
         //else kmer is a true positive, do nothing
 
     }
 
-    if (last_partition)   
+    if (last_partition){
         fclose(file_false_positive_kmers);
+    	file_false_positive_kmers_binary->close();
+    }
 } 
 
 int debloom(int order, int max_memory)
@@ -265,6 +274,7 @@ Set *load_false_positives()
     kmer_type kmer, graine, graine_revcomp;
 
     Bank *FalsePositives = new Bank(return_file_name(false_positive_kmers_file));
+
 
     // alloc false positives with the just the right estimated size
 

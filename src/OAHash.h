@@ -75,6 +75,8 @@ public:
     uint64_t memory_usage();
     float load_factor();
     
+    static size_t get_sizeof_element_pair();
+
 };
 
 #endif

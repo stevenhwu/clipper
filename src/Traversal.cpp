@@ -8,7 +8,6 @@
 using namespace std;
 Traversal::~Traversal()
 {
-	printf("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n");
 	delete hash;
 }
 
@@ -17,8 +16,16 @@ void Traversal::SetSolidKmersColour(BinaryBank *bank, int max_memory){
 	//TODO parse into hash again?? not very smart way to do this
 
 	solid_kmers_colour->rewind_all();
+	off_t nbElements = solid_kmers_colour->nb_elements();
+	off_t file_size = solid_kmers_colour->file_size();
 
-	hash = new OAHash(max_memory * 1024LL * 1024LL);
+	long long int new_max = (2*solid_kmers_colour->nb_elements()) * OAHash::size_entry() ;
+	//reach max after searching through loop, just double it for now, fix it later
+	//(1+solid_kmers_colour->nb_elements()) is the min, but slow, divided into partitions to ensure speed
+
+
+	hash = new OAHash(new_max);
+//	hash->printstat();
 	uint64_t nkmers_read = 0;
 	kmer_type lkmer;
 	KmerColour lkmer_colour;
@@ -28,6 +35,7 @@ void Traversal::SetSolidKmersColour(BinaryBank *bank, int max_memory){
 		hash->insert(lkmer, lkmer_colour);
         nkmers_read++;
 	}
+//	hash->printstat();
 //	hash.start_iterator();
 //	while (hash.next_iterator())
 //	{
@@ -1254,6 +1262,7 @@ bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start
 		}
     }
 
+
     if(consensuses.size() ==1){
 		set<string>::iterator c0 = consensuses.begin();
 //		const std::basic_string<char, std::char_traits<char>,
@@ -1273,20 +1282,19 @@ bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start
 			code2seq(rev, kmer_seq);
 			new_colour[i] = GetColour(new_graine);
 //			printf("char:%c %d %s %u %s %lu %lu\n",  c, nt2int, print_kmer(new_graine),  new_colour[i], kmer_seq,  new_graine, rev);
-
 		}
-
-
     }
     else{
-    	printf("FAIL!! Not yet implemented");
+    	bool validated = validate_consensuses(consensuses, consensus, consensus_length);
+    	printf("FAIL!! Not yet implemented:%d %d %d\t", success, validated, consensuses.size());
     	for(set<string>::iterator c0 = consensuses.begin(); c0 != consensuses.end(); c0++) {
     	   string element = *c0;
-    	}
+//    	   printf("%s\n",element.data());
+    	}//TODO, should be easy, just use consensus instead of consensuses(SETS). Testing required
+//    	printf("\n");
+
 
     }
-
-
     // if consensus phase failed, stop
     if (!success)
         return false;
@@ -1296,6 +1304,8 @@ bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start
 //	printf("Consensus:%s\n", consensus);
     if (!validated)
         return false;
+
+
 
     // the consensuses agree, mark all the involved extensions
     // (corresponding to alternative paths we will never traverse again)

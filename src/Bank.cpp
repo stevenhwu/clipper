@@ -694,6 +694,11 @@ void BinaryBank::open(bool write)
 
 }
 
+off_t BinaryBank::file_size()
+{
+  return fsize(filename);
+}
+
 off_t BinaryBank::nb_elements()
 {
   return fsize(filename)/sizeElement;

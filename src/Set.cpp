@@ -130,7 +130,7 @@ bool AssocSet::next_iterator()
 void AssocSet::print_total_size()
 {
     printf("Assoc set size: %li\n",liste.size());
-    printf("Assoc set capacity: listekmer %li  liste val%li\n",liste.capacity(),liste_value.capacity());
+    printf("Assoc set capacity: listekmer %li  liste val %li\n",liste.capacity(),liste_value.capacity());
     printf("%li *%li  + %li* %li =  %li MB \n",liste.capacity(),sizeof(set_elem),liste_value.capacity(),sizeof(set_value_t),
             (liste.capacity()*sizeof(set_elem)+liste_value.capacity()*sizeof(set_value_t))/1024/1024
           );

@@ -115,6 +115,7 @@ class BinaryBank
         void close();
         void open(bool write);
         off_t nb_elements();
+        off_t file_size();
 
         size_t ReadKmer( void *element);
         size_t ReadColour( void *element);

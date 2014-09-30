@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <unordered_map>
 #include <map>
+#include <utility>
+#include <vector>
 
 const int kErrorCode = 100;//TODO: with errorCode, fix or flexible? define only == or >=
 //TODO: KmerColour unsign char 0-255, 8 species. dynamicly change to unsign short/int/long? for more species?

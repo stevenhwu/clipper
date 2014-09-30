@@ -103,7 +103,7 @@ int first =1;
 //        if (use_hashing)
         {
             nb_partitions = (uint32_t) ceil((float) nb_partitions / load_factor);
-            nb_partitions = ((nb_partitions * OAHash::size_entry()) + sizeof(key_type)-1) / sizeof(key_type); // also adjust for hash overhead
+            nb_partitions = ((nb_partitions * OAHashColour::size_entry()) + sizeof(key_type)-1) / sizeof(key_type); // also adjust for hash overhead
             nb_partitions = max((int)(nb_partitions/(optimism+1)), 1);
             if (verbose)
                 printf("Updated number of partitions for hash-based k-mer counting: %d\n",nb_partitions);
@@ -541,10 +541,12 @@ first = 1;
                 OAHashColour hash(max_memory*1024LL*1024LL);
 
 //                OAHash hash2(max_memory*1024LL*1024LL);
-
-                hash.printstat();
+//                hash.printstat();
 //                hash2.printstat();
+//                printf("%zu\t%zu\n",hash.size_entry(), hash2.size_entry());
+////                printf()
 //                exit(-1);
+
                 uint64_t nkmers_read=0;
 
                 while (redundant_partitions_file[p]->read_element_buffered (&lkmer))

@@ -1,12 +1,13 @@
 // open-addressing hash table with linear probing, follows wikipedia
 // to reduce memory, elements with [value == 0] are UNOCCUPIED, deal with it.
 
-#include <iostream>
+//#include <iostream>
 #include <stdio.h>
-#include <string.h>
-#include <algorithm> // for max
-#include <malloc.h>
+//#include <string.h>
+//#include <algorithm> // for max
+//#include <malloc.h>
 #include "OAHash.h"
+#include "KmerColour.h"
 
 using namespace::std;
 
@@ -87,31 +88,28 @@ float AbstractOAHash::load_factor()
 }
 
 
-void OAHashColour::printstat()
-{
-    fprintf(stderr,"\n----------------------Stat OA Hash Table ---------------------\n");
-
-    fprintf(stderr,"max elements: %lld, memory usage: %lld\n",(long long)hash_size,(long long)memory_usage());
-    fprintf(stderr,"load factor: %.2f\n",load_factor());
-}
-
 void AbstractOAHash::printstat()
 {
-    fprintf(stderr,"\n----------------------Stat OA Hash Table ---------------------\n");
+    fprintf(stderr,"\n----------------------Stat OA Abstract Hash Table ---------------------\n");
 
-    fprintf(stderr,"max elements: %lld, memory usage: %lld\n",(long long)hash_size,(long long)memory_usage());
-    fprintf(stderr,"load factor: %.2f\n",load_factor());
+	fprintf(stderr,
+			"max elements: %lld, memory usage: %lld sizeof element_pair:%zu\n",
+			(long long) hash_size, (long long) memory_usage(),
+			sizeof_element_pair);//, sizeof(element_pair));
+	fprintf(stderr,"load factor: %.2f\n",load_factor());
 }
 
-OAHash::OAHash(){
-	data = nullptr;
-//	data = NULL;
-//	data = nullptr_t;
+
+
+uint64_t AbstractOAHash::memory_usage()
+{
+    return hash_size* sizeof_element_pair; // in bits
 }
+
 OAHash::OAHash(uint64_t max_memory)  // in bytes
 {
-
-    hash_size = max_memory / sizeof(element_pair);
+	sizeof_element_pair = sizeof(element_pair);
+    hash_size = max_memory / sizeof_element_pair;
 
     if (hash_size == 0)
     {
@@ -132,16 +130,17 @@ OAHash::~OAHash()
     printf("Dest OA Fail\n");
 }
 
-int OAHash::size_entry()
-{
-    return sizeof(element_pair);
-}
+//int OAHash::size_entry()
+//{
+//    return sizeof(element_pair);
+//}
 
 
 bool OAHash::is_occupied(element_pair *element)
 {
     return (element->value != 0);
 }
+
 
 OAHash::element_pair * OAHash::find_slot(key_type key)
 {
@@ -165,7 +164,6 @@ OAHash::element_pair * OAHash::find_slot(key_type key)
     return element;
 }
 
-//if graine already here, overwrite old value
 //if graine already here, overwrite old value
 // increment the value of a graine
 void OAHash::increment(key_type graine)
@@ -191,6 +189,10 @@ void OAHash::insert(key_type graine, int value)
     element->value = value;
 
 }
+bool OAHash::has_key(key_type graine)
+{
+    return get(graine, NULL);
+}
 
 bool OAHash::get( key_type graine, int * val)
 {
@@ -203,12 +205,6 @@ bool OAHash::get( key_type graine, int * val)
 }
 
 
-
-
-bool OAHash::has_key(key_type graine)
-{
-    return get(graine,NULL);
-}
 
 
 // call start_iterator to reinit the iterator, then do a while(next_iterator()) {..} to traverse every cell
@@ -235,20 +231,25 @@ bool OAHash::next_iterator()
 
 
 
-uint64_t OAHash::memory_usage()
-{
-    return hash_size* sizeof(element_pair); // in bits
-}
+//uint64_t OAHash::memory_usage()
+//{
+//    return hash_size* sizeof(element_pair); // in bits
+//}
 
 
 //size_t OAHash::get_sizeof_element_pair(){
 //	return sizeof(element_pair);
 //}
 
+int OAHash::size_entry()
+{
+    return sizeof(element_pair);
+}
 OAHashColour::OAHashColour(uint64_t max_memory) : AbstractOAHash()// in bytes
 {
 
-    hash_size = max_memory / sizeof(element_pair);
+	sizeof_element_pair = sizeof(element_pair);
+    hash_size = max_memory / sizeof_element_pair;
 
     if (hash_size == 0)
     {
@@ -257,16 +258,14 @@ OAHashColour::OAHashColour(uint64_t max_memory) : AbstractOAHash()// in bytes
     }
     nb_inserted_keys = 0;
     data = (element_pair *) calloc( hash_size, sizeof(element_pair));  //create hashtable
-//	free(OAHash::data);
+
 
 }
 
 
 
 OAHashColour::~OAHashColour(){
-	printf("Dest OA Colour\n");
 	free(data);
-	printf("Dest OA Colour pass\n");
 }
 
 void OAHashColour::increment_colour(key_type graine, KmerColour colour) {
@@ -360,7 +359,19 @@ bool OAHashColour::next_iterator()
     }
     return true;
 }
-uint64_t OAHashColour::memory_usage()
-{
-    return hash_size* sizeof(element_pair); // in bits
+
+bool OAHashColour::has_key(key_type graine) {
+	return get_colour(graine, NULL);
 }
+int OAHashColour::size_entry()
+{
+    return sizeof(element_pair);
+}
+
+
+
+
+//uint64_t OAHashColour::memory_usage()
+//{
+//    return hash_size* sizeof(element_pair); // in bits
+//}

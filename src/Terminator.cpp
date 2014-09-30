@@ -256,8 +256,9 @@ bool BranchingTerminator::is_indexed(kmer_type graine)
   return branching_kmers->contains(graine);
 }
 
-BranchingTerminator::BranchingTerminator(BinaryBank *given_SolidKmers, uint64_t genome_size, Bloom *given_bloom, Set *given_debloom) : Terminator(given_SolidKmers,given_bloom,given_debloom)
-{
+BranchingTerminator::BranchingTerminator(BinaryBank *given_SolidKmers,
+		uint64_t genome_size, Bloom *given_bloom, Set *given_debloom) :
+		Terminator(given_SolidKmers, given_bloom, given_debloom) {
 	kmer_type kmer;
     // estimate, from the first million of kmers, the number of branching kmers, extrapolating given the estimated genome size
     // TODO: erwan noticed that this code isn't useful anymore with AssocSet, feel free to remove it sometimes
@@ -297,6 +298,7 @@ BranchingTerminator::BranchingTerminator(BinaryBank *given_SolidKmers, uint64_t 
     SolidKmers->rewind_all();
     nb_branching_kmers = 0;
     uint64_t nb_solid_kmers = 0;
+    printf("solidKmers_got_size:%zu\n", SolidKmers->get_sizeElement());
     while (SolidKmers->read_element(&kmer))
     {
         if (is_branching(kmer))
@@ -422,3 +424,78 @@ bool BloomTerminator::next(kmer_type *kmer)
     return SolidKmers->read_element(kmer);
 }
 
+
+BranchingTerminatorColour::BranchingTerminatorColour(
+		BinaryBank *given_SolidKmers, uint64_t genome_size, Bloom *given_bloom,
+		Set *given_debloom) :
+		BranchingTerminator(given_SolidKmers, genome_size, given_bloom, given_debloom) {
+//		Terminator(given_SolidKmers, given_bloom, given_debloom) {
+	kmer_type kmer;
+
+    branching_kmers = new AssocSet();
+
+    // index, once and for all, all the branching solid kmers
+    SolidKmers->rewind_all();
+    nb_branching_kmers = 0;
+    uint64_t nb_solid_kmers = 0;
+    printf("solidKmers_got_size:%zu\n", SolidKmers->get_sizeElement());
+    SolidKmers->read_element(&kmer);
+    printf("%s\n",print_kmer(kmer));
+    while (SolidKmers->read_element(&kmer))
+    {
+        if (is_branching(kmer))
+        {
+	  // branching_kmers->insert(kmer,0);
+            branching_kmers->insert(kmer);
+            nb_branching_kmers++;
+        }
+
+        nb_solid_kmers++;
+		if ((nb_branching_kmers % table_print_frequency) == 0 && nb_branching_kmers > 0)
+			fprintf(stderr, "%cIndexing branching kmers %lld ", 13,
+					nb_branching_kmers);
+//					estimated_nb_branching_kmers);
+    }
+    off_t nbElements = SolidKmers->nb_elements();
+
+
+
+    printf("solidKmer take3:%lu\t%zd\t%d\n",nb_solid_kmers, nbElements, SolidKmers->get_sizeElement());
+    if (nb_branching_kmers == 0)
+        printf("\n**** Warning\n\nNo branching kmers were found in this dataset (it is either empty or a tiny circular genome) - Minia will not assemble anything.\n\n****\n\n");
+
+	branching_kmers->finalize();
+	branching_kmers->print_total_size();
+    fprintf (stderr,"\n\nAllocated memory for marking: %lld branching kmers x (%d+%d )B \n",nb_branching_kmers,sizeof(kmer_type),sizeof(set_value_t));
+    fprintf (stderr," actual implementation:  (sizeof(kmer_type) = %d B) + (sizeof(set_value_t) = %d B) per entry:  %.2f bits / solid kmer\n",sizeof(kmer_type),sizeof(set_value_t),(nb_branching_kmers*((sizeof(kmer_type)+sizeof(set_value_t))*8.0))/nb_solid_kmers);
+
+    // init branching_kmers iterator for what happens next
+     branching_kmers->start_iterator();
+}
+
+// constructor that simply loads a dump of branching kmers
+BranchingTerminatorColour::BranchingTerminatorColour(BinaryBank *branchingKmers,
+		BinaryBank *given_SolidKmers, Bloom *given_bloom, Set *given_debloom) :
+		BranchingTerminator(branchingKmers, given_SolidKmers, given_bloom, given_debloom) {
+    nb_branching_kmers = branchingKmers->nb_elements();
+    int NBITS_TERMINATOR = max( (int)ceilf(log2f(nb_branching_kmers)), 1);
+
+    // call Hash16 constructor
+    // branching_kmers = new Hash16(NBITS_TERMINATOR);
+    branching_kmers = new AssocSet();
+
+    // load branching kmers
+    branchingKmers->rewind_all();
+    kmer_type kmer;
+    while (branchingKmers->read_element(&kmer))
+      branching_kmers->insert(kmer); //,0 for Hash16
+
+	branching_kmers->finalize();
+
+    if (verbose)
+        fprintf (stderr,"\nLoaded %lld branching kmers x %d B =  %.1f MB\n",nb_branching_kmers,sizeof(cell<kmer_type>),((1<<NBITS_TERMINATOR)*sizeof(cell<kmer_type>)*1.0)/1024.0/1024.0);
+
+    // init branching_kmers iterator for what happens next
+    branching_kmers->start_iterator();
+}
+BranchingTerminatorColour::~BranchingTerminatorColour(){}

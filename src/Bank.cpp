@@ -710,6 +710,16 @@ size_t BinaryBank::ReadKmer( void *element)
     return fread(element, kSizeOfKmerType, 1, binary_read_file);
 }
 
+size_t BinaryBank::ReadKmer_skip_colour( void *element)
+{
+	size_t binaryReadFile = fread(element, kSizeOfKmerType, 1,
+			binary_read_file);
+	binaryReadFile;
+	void* a;
+	fread(a , kSizeOfKmerColour, 1, binary_read_file);
+    return binaryReadFile;
+}
+
 size_t BinaryBank::ReadColour( void *element)
 {
     return fread(element, kSizeOfKmerColour, 1, binary_read_file);

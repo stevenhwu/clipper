@@ -19,7 +19,7 @@ void Traversal::SetSolidKmersColour(BinaryBank *bank, int max_memory){
 	off_t nbElements = solid_kmers_colour->nb_elements();
 	off_t file_size = solid_kmers_colour->file_size();
 
-	long long int new_max = (2*solid_kmers_colour->nb_elements()) * OAHash::size_entry() ;
+	long long int new_max = (2*solid_kmers_colour->nb_elements()) * OAHashColour::size_entry() ;
 	//reach max after searching through loop, just double it for now, fix it later
 	//(1+solid_kmers_colour->nb_elements()) is the min, but slow, divided into partitions to ensure speed
 
@@ -32,7 +32,7 @@ void Traversal::SetSolidKmersColour(BinaryBank *bank, int max_memory){
 	while (solid_kmers_colour-> ReadKmer(&lkmer)) {
 		solid_kmers_colour-> ReadColour(&lkmer_colour);
 //		printf("K:%lu\t%hu\n", lkmer, lkmer_colour);
-		hash->insert(lkmer, lkmer_colour);
+		hash->insert_colour(lkmer, lkmer_colour);
         nkmers_read++;
 	}
 //	hash->printstat();

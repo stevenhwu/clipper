@@ -5,7 +5,12 @@
 #include "omp.h"
 #endif
 
+#include "Memory.h"
+#include <malloc.h>
+
 #define SINGLE_BAR 1
+
+
 
 bool clear_cache = false; // clear file cache from memory (for timing only)
 float load_factor = 0.7;
@@ -532,13 +537,20 @@ first = 1;
 //            if (use_hashing_for_this_partition)//ALWAYS
             {
                 // hash partition and save to solid file
-                OAHash hash(max_memory*1024LL*1024LL);
+
+                OAHashColour hash(max_memory*1024LL*1024LL);
+
+//                OAHash hash2(max_memory*1024LL*1024LL);
+
+                hash.printstat();
+//                hash2.printstat();
+//                exit(-1);
                 uint64_t nkmers_read=0;
-                
+
                 while (redundant_partitions_file[p]->read_element_buffered (&lkmer))
                 {
                 	redundant_partitions_colour_file[p]-> read_element_buffered(&lkmer_colour) ;
-                    hash.increment(lkmer, lkmer_colour);
+                    hash.increment_colour(lkmer, lkmer_colour);
                     nkmers_read++;// Why not inside SINGLE_BAR??
 #if SINGLE_BAR
                     if(verbose==0 && nkmers_read==table_print_frequency)
@@ -562,6 +574,7 @@ first = 1;
                 while (hash.next_iterator())
                 {
                     uint_abundance_t abundance = hash.iterator->value;
+
                     if(output_histo)
                     {
                         uint_abundance_t saturated_abundance;
@@ -602,11 +615,11 @@ first = 1;
             //In test dataset,
 //            4729+4653+4642+4592 = 18616 (unique)
 //            1252+1192+1165+1164 = 4773 (>min)
-            
+            printf("Out Total:\n");
             
             if (verbose >= 1)
                 fprintf(stderr,"%cPass %d/%d, loaded and sorted partition %d/%d, found %lld solid kmers so far",13,current_pass+1,nb_passes,p+1,nb_partitions,(long long)(NbSolid_omp[tid]));
-            
+
             if (verbose >= 2)
                 printf("\nPass %d/%d partition %d/%d %ld distinct kmers\n",current_pass+1,nb_passes,p+1,nb_partitions,/*total_kmers_per_partition[p],*/distinct_kmers_per_partition[p]);
             
@@ -622,7 +635,7 @@ first = 1;
             redundant_partitions_file[p]->close();
 			redundant_partitions_colour_file[p]->close();
 //            remove(redundant_filename[p]);
-            
+            printf("End partition\n");
         } // end for partitions
 
 #if OMP

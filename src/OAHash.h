@@ -22,21 +22,9 @@ typedef kmer_type key_type;
 #endif
 #endif
 
-class OAHash{
-    
+class AbstractOAHash{
+
 protected:
-
-    struct element_pair
-    {
-        key_type key;
-        uint32_t value; 
-        KmerColour colour;
-    };
-   
-
-    uint64_t hash_size;
-    uint64_t nb_inserted_keys;
-    element_pair* data;
 
 #ifdef _largeint
     inline uint64_t hashcode(LargeInt<KMER_PRECISION> elem);
@@ -49,6 +37,39 @@ protected:
 #endif
     uint64_t hashcode( uint64_t elem);
 
+
+    uint64_t hash_size;
+    uint64_t nb_inserted_keys;
+
+public:
+    float load_factor();
+
+    void printstat();
+
+	virtual void start_iterator() = 0;
+    virtual bool next_iterator() = 0;
+    virtual uint64_t memory_usage(){};
+
+//    ~AbstractOAHash();
+
+};
+
+class OAHash : public AbstractOAHash{
+
+
+private:
+#pragma pack(1)
+	struct element_pair
+	{
+		key_type key;
+		uint32_t value;
+	};
+	element_pair* data;
+
+
+
+protected:
+
     bool is_occupied(element_pair *element);
 
 public:
@@ -56,27 +77,60 @@ public:
     static int size_entry();
     
     // iterator functions:
-    element_pair *iterator;
+    element_pair* iterator;
     void start_iterator();
     bool next_iterator();
 
-
+    OAHash();
     OAHash(uint64_t max_elements);
     ~OAHash();
     element_pair * find_slot(key_type key);
+
     void insert(key_type graine, int value);
-    void insert(key_type graine, KmerColour colour);
     void increment(key_type graine);
-    void increment(key_type graine, KmerColour colour);
     bool get( key_type graine, int * val);
-    bool get_colour( key_type graine, KmerColour *colour);
+
     bool has_key(key_type graine);
     void printstat();
     uint64_t memory_usage();
-    float load_factor();
     
-    static size_t get_sizeof_element_pair();
 
+    static size_t get_sizeof_element_pair();//FIXME
+
+};
+
+class OAHashColour: public AbstractOAHash{
+
+private:
+#pragma pack(16)
+	struct element_pair
+	{
+		key_type key;
+		uint32_t value;
+		KmerColour colour;
+	};
+	element_pair* data;
+
+
+protected:
+    bool is_occupied(element_pair *element);
+
+public:
+    element_pair *iterator;
+
+	void start_iterator();
+	bool next_iterator();
+
+	OAHashColour(uint64_t max_elements);
+	~OAHashColour();
+
+    void insert_colour(key_type graine, KmerColour colour);
+    void increment_colour(key_type graine, KmerColour colour);
+    bool get_colour( key_type graine, KmerColour *colour);
+
+    element_pair* find_slot(key_type key);
+    uint64_t memory_usage();
+    void printstat();
 };
 
 #endif

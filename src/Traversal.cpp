@@ -24,7 +24,7 @@ void Traversal::SetSolidKmersColour(BinaryBank *bank, int max_memory){
 	//(1+solid_kmers_colour->nb_elements()) is the min, but slow, divided into partitions to ensure speed
 
 
-	hash = new OAHash(new_max);
+	hash = new OAHashColour(new_max);
 //	hash->printstat();
 	uint64_t nkmers_read = 0;
 	kmer_type lkmer;

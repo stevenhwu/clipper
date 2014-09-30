@@ -47,7 +47,7 @@ protected:
     int max_breadth;
 
     BinaryBank *solid_kmers_colour;
-    OAHash *hash;
+    OAHashColour *hash;
     virtual char avance(kmer_type graine, int current_strand, bool first_extension, char * newNT, kmer_type previous_kmer) = 0;
     virtual char avance_colour(kmer_type graine, int current_strand, bool first_extension, char * newNT, KmerColour *newColour, kmer_type previous_kmer) = 0;
 //    virtual char avance_colour(kmer_type graine, int current_strand, bool first_extension, char * newNT, kmer_type *new_kmer, KmerColour *new_colour, kmer_type previous_kmer) = 0;

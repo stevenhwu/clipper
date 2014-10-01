@@ -705,22 +705,27 @@ off_t BinaryBank::nb_elements()
 }
 
 
-size_t BinaryBank::ReadKmer( void *element)
+size_t BinaryBank::read_kmer(void *element)
 {
     return fread(element, kSizeOfKmerType, 1, binary_read_file);
 }
 
-size_t BinaryBank::ReadKmer_skip_colour( void *element)
+size_t BinaryBank::read_kmer_colour(void *element_kmer, void* element_colour)
 {
-	size_t binaryReadFile = fread(element, kSizeOfKmerType, 1,
-			binary_read_file);
-	binaryReadFile;
-	void* a;
-	fread(a , kSizeOfKmerColour, 1, binary_read_file);
-    return binaryReadFile;
+	fread(element_kmer, kSizeOfKmerType, 1, binary_read_file);
+    return fread(element_colour, kSizeOfKmerColour, 1, binary_read_file);
 }
 
-size_t BinaryBank::ReadColour( void *element)
+size_t BinaryBank::read_kmer_skip_colour( void *element)
+{
+	size_t size = fread(element, kSizeOfKmerType, 1,
+			binary_read_file);
+	void* a;
+	fread(a , kSizeOfKmerColour, 1, binary_read_file);
+    return size;
+}
+
+size_t BinaryBank::read_colour( void *element)
 {
     return fread(element, kSizeOfKmerColour, 1, binary_read_file);
 }
@@ -776,7 +781,7 @@ void BinaryReads::close()
     //flush buffer
     if(cpt_buffer)
     {
-        printf("close :write block %i \n",cpt_buffer);
+//        printf("close :write block %i \n",cpt_buffer);
         block_size = cpt_buffer;
         fwrite(&block_size, sizeof(unsigned int), 1, binary_read_file); // block header
         if (!fwrite(buffer, 1, cpt_buffer, binary_read_file))

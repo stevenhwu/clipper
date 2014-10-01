@@ -6,6 +6,119 @@
 #include "Kmer.h" //TODO remove later, debugging only
 
 using namespace std;
+bool is_tip(kmer_type kmer, Bloom *bloom_solid_kmers, Set *debloom)
+{
+    int nb_extensions[2]={0};
+    kmer_type N=0;
+    int N_strand=0;
+    for (int strand=0;strand<2; strand++)
+    {
+        for(int test_nt=0; test_nt<4; test_nt++)
+        {
+            int current_strand = strand;
+            kmer_type current_kmer = next_kmer(kmer,test_nt, &current_strand);
+            if(bloom_solid_kmers->contains(current_kmer) && !debloom->contains(current_kmer)){
+                N = current_kmer;
+                N_strand = current_strand;
+                nb_extensions[strand]++;
+            }
+        }
+    }
+    /*    if (nb_extensions[0] != 0 &&  nb_extensions[1] != 0)
+          return false;*/
+    // fixme-order>0: too strict, because includes ends of contigs
+    if (nb_extensions[0] == 0 ||  nb_extensions[1] == 0)
+        return true;
+
+    // now test degree of N
+    int N_degree = 0;
+    for(int test_nt=0; test_nt<4; test_nt++)
+    {
+        int current_strand = N_strand;
+        kmer_type current_kmer = next_kmer(N,test_nt, &current_strand);
+
+        if(bloom_solid_kmers->contains(current_kmer) && !debloom->contains(current_kmer)){
+            N_degree++;
+        }
+    }
+    return N_degree>=3;
+
+}
+
+int traversal_extensions(kmer_type kmer, int strand, int &nt, Bloom *bloom_solid_kmers, Set *debloom)
+{
+	int order = 0;
+    if (order==0) // faster order=0 extensions (note: in fact, order is always equal to 0)
+    {
+        int nb_extensions = 0;
+        for(int test_nt=0; test_nt<4; test_nt++)
+        {
+            int current_strand = strand;
+            kmer_type current_kmer = next_kmer(kmer,test_nt,&current_strand);
+//			if (kmer == 2239396308425812948) {
+//				printf("%ld\t%d\t%ld\t%d\t%d\n", kmer, test_nt, current_kmer,
+//						bloom_solid_kmers->contains(current_kmer),
+//						!debloom->contains(current_kmer));
+//			}
+
+            if (bloom_solid_kmers->contains(current_kmer) && !debloom->contains(current_kmer))
+            {
+                nt = test_nt;
+                nb_extensions ++;
+            }
+        }
+        return nb_extensions;
+    }
+    else
+    {
+        if (order==1) // optimized code for order=1 (copied from assemb.cpp)
+        {
+            int nb_extensions = 0;
+            for(int test_nt=0; test_nt<4; test_nt++)
+            {
+                int current_strand = strand;
+                kmer_type current_kmer = next_kmer(kmer,test_nt, &current_strand);
+
+                if(bloom_solid_kmers->contains(current_kmer) && !debloom->contains(current_kmer)){
+
+                    bool is_linked = false;
+                    for(int tip_nt=0; tip_nt<4; tip_nt++)
+                    {
+                        int new_strand = current_strand;
+                        kmer_type kmer_after_possible_tip = next_kmer(current_kmer,tip_nt, &new_strand);
+                        if(bloom_solid_kmers->contains(kmer_after_possible_tip) && !debloom->contains(kmer_after_possible_tip))
+                        {
+                            is_linked = true;
+                            break;
+                        }
+                    }
+                    if (!is_linked)
+                        continue; // it's a tip, because it's linked to nothing
+
+                    nt = test_nt;
+                    nb_extensions++;
+                }
+            }
+            return nb_extensions;
+        }
+        else
+        { // slower, general code for order>=0
+            Frontline frontline( kmer, strand, bloom_solid_kmers, debloom, NULL, 0);
+            while (frontline.depth <= order) // go one step further than order
+            {
+                frontline.go_next_depth();
+                if (frontline.size() <= 1) // stop when no more ambiguous choices
+                    break;
+                if (frontline.size() > 10) // don't allow a breadth too large anyway
+                    break;
+            }
+            if (frontline.size() > 0) // recover the nt that lead to this node
+                nt = frontline.front().nt;
+            return frontline.size();
+        }
+    }
+}
+
 Traversal::~Traversal()
 {
 	delete hash;
@@ -23,14 +136,15 @@ void Traversal::SetSolidKmersColour(BinaryBank *bank, int max_memory){
 	//reach max after searching through loop, just double it for now, fix it later
 	//(1+solid_kmers_colour->nb_elements()) is the min, but slow, divided into partitions to ensure speed
 
+	printf("%llu %zu\n", new_max/2, file_size);
 
 	hash = new OAHashColour(new_max);
 //	hash->printstat();
 	uint64_t nkmers_read = 0;
 	kmer_type lkmer;
 	KmerColour lkmer_colour;
-	while (solid_kmers_colour-> ReadKmer(&lkmer)) {
-		solid_kmers_colour-> ReadColour(&lkmer_colour);
+	while (solid_kmers_colour-> read_kmer(&lkmer)) {
+		solid_kmers_colour-> read_colour(&lkmer_colour);
 //		printf("K:%lu\t%hu\n", lkmer, lkmer_colour);
 		hash->insert_colour(lkmer, lkmer_colour);
         nkmers_read++;
@@ -94,80 +208,6 @@ void Traversal::mark_extensions(set<kmer_type> *extensions_to_mark)
 // order=0: just examine immediate neighbors
 // order>0: don't return extensions yielding to deadends of length <= order
 // todo-order>0: there is probably a minor bug: it is likely to return 0 extensions too early for end of contigs 
-int traversal_extensions(kmer_type kmer, int strand, int &nt, Bloom *bloom_solid_kmers, Set *debloom)
-{
-	int order = 0;
-    if (order==0) // faster order=0 extensions (note: in fact, order is always equal to 0)
-    {
-        int nb_extensions = 0;
-        for(int test_nt=0; test_nt<4; test_nt++) 
-        {
-            int current_strand = strand;
-            kmer_type current_kmer = next_kmer(kmer,test_nt,&current_strand);
-//			if (kmer == 2239396308425812948) {
-//				printf("%ld\t%d\t%ld\t%d\t%d\n", kmer, test_nt, current_kmer,
-//						bloom_solid_kmers->contains(current_kmer),
-//						!debloom->contains(current_kmer));
-//			}
-
-            if (bloom_solid_kmers->contains(current_kmer) && !debloom->contains(current_kmer))
-            {
-                nt = test_nt;
-                nb_extensions ++;
-            }
-        }
-        return nb_extensions;
-    }
-    else
-    {
-        if (order==1) // optimized code for order=1 (copied from assemb.cpp)
-        {
-            int nb_extensions = 0;
-            for(int test_nt=0; test_nt<4; test_nt++) 
-            {
-                int current_strand = strand;
-                kmer_type current_kmer = next_kmer(kmer,test_nt, &current_strand);
-
-                if(bloom_solid_kmers->contains(current_kmer) && !debloom->contains(current_kmer)){
-
-                    bool is_linked = false;
-                    for(int tip_nt=0; tip_nt<4; tip_nt++) 
-                    {
-                        int new_strand = current_strand;
-                        kmer_type kmer_after_possible_tip = next_kmer(current_kmer,tip_nt, &new_strand);
-                        if(bloom_solid_kmers->contains(kmer_after_possible_tip) && !debloom->contains(kmer_after_possible_tip))
-                        {
-                            is_linked = true;
-                            break;
-                        }
-                    }
-                    if (!is_linked)
-                        continue; // it's a tip, because it's linked to nothing
-
-                    nt = test_nt;
-                    nb_extensions++;
-                }
-            }
-            return nb_extensions;
-        }
-        else
-        { // slower, general code for order>=0
-            Frontline frontline( kmer, strand, bloom_solid_kmers, debloom, NULL, 0);
-            while (frontline.depth <= order) // go one step further than order
-            {
-                frontline.go_next_depth();
-                if (frontline.size() <= 1) // stop when no more ambiguous choices
-                    break;
-                if (frontline.size() > 10) // don't allow a breadth too large anyway
-                    break;
-            }
-            if (frontline.size() > 0) // recover the nt that lead to this node
-                nt = frontline.front().nt;
-            return frontline.size();
-        }
-    }
-}
-
 int Traversal::extensions(kmer_type kmer, int strand, int &nt)
 {
     return traversal_extensions(kmer,strand,nt,bloom,debloom);
@@ -180,45 +220,6 @@ int Traversal::extensions(kmer_type kmer, int strand, int &nt)
  * other strand: 1 extension to N
  * N: >= 3 neighbors
  * */
-bool is_tip(kmer_type kmer, Bloom *bloom_solid_kmers, Set *debloom)
-{
-    int nb_extensions[2]={0};
-    kmer_type N=0;
-    int N_strand=0;
-    for (int strand=0;strand<2; strand++)
-    {
-        for(int test_nt=0; test_nt<4; test_nt++) 
-        {
-            int current_strand = strand;
-            kmer_type current_kmer = next_kmer(kmer,test_nt, &current_strand);
-            if(bloom_solid_kmers->contains(current_kmer) && !debloom->contains(current_kmer)){
-                N = current_kmer;
-                N_strand = current_strand;
-                nb_extensions[strand]++;
-            }
-        }
-    }
-    /*    if (nb_extensions[0] != 0 &&  nb_extensions[1] != 0)
-          return false;*/
-    // fixme-order>0: too strict, because includes ends of contigs
-    if (nb_extensions[0] == 0 ||  nb_extensions[1] == 0)
-        return true;
-
-    // now test degree of N
-    int N_degree = 0;
-    for(int test_nt=0; test_nt<4; test_nt++) 
-    {
-        int current_strand = N_strand;
-        kmer_type current_kmer = next_kmer(N,test_nt, &current_strand);
-
-        if(bloom_solid_kmers->contains(current_kmer) && !debloom->contains(current_kmer)){
-            N_degree++;
-        }
-    } 
-    return N_degree>=3;
-
-}
-
 // from a branching kmer, get a new node that has never been used before
 // (very simple initial k-mer selection, current used in minia-graph)
 bool Traversal::get_new_starting_node(kmer_type branching_kmer, kmer_type &starting_kmer)
@@ -374,119 +375,6 @@ bool Traversal::find_starting_kmer_inside_simple_path(kmer_type branching_kmer, 
 
 // get a better starting point than a branching kmer inside a long (~2k) simple path: 
 // a k-mer that isn't inside a bubble/tip
-bool MonumentTraversal::find_starting_kmer(kmer_type branching_kmer, kmer_type &starting_kmer)
-{
-
-    char newNT[2];
-    int nt;
-    bool debug=false;
-    int sum_depths = 0;
-
-    if (!get_new_starting_node_improved(branching_kmer, starting_kmer))
-        return false;
-
-    if (debug) printf("getting new starting kmer\n");
-   
-    for (int strand = 0; strand<2 ; strand++)
-    {
-        kmer_type previous_kmer = 0;
-        int previous_strand = 0;
-
-        // do a BFS to make sure we're not inside a bubble or tip
-        Frontline frontline( starting_kmer, strand, bloom, debloom, terminator, NULL, 0, false);
-
-        do
-        {
-            bool should_continue = frontline.go_next_depth();
-            if (!should_continue)
-            {
-                if (debug) printf("strand %d shouldnt continue\n");
-                break;
-            }
-
-            // put the same contraints as in a bubble
-            if (frontline.depth > max_depth || frontline.size() > max_breadth)
-            {
-                if (debug) printf("strand %d reached max depth or breadth (%d %d)\n",strand, frontline.depth,frontline.size());
-                break;
-            }
-
-            // stopping condition: nothing more to explore
-            if (frontline.size() == 0)
-            {
-                if (debug) printf("strand %d nothing more to explore\n");
-                break;
-            }
-           
-            char useless_string[max_depth+1];
-            int useless_int;
-            
-            if (frontline.size() <= 1)
-            {
-                kmer_type current_kmer = 0;
-                if (frontline.size() == 1)
-                {
-                    node current_node = frontline.front();
-                    current_kmer = current_node.kmer;
-                }
-
-                if ((previous_kmer != 0) && terminator->is_branching(previous_kmer))
-                {
-                    /* the current situation is:
-                     *      
-                     *    current_kmer  previous_kmer
-                     *   -O-------------O------------- ... ---starting_kmer
-                     *                  \_....
-                     *
-                     * or 
-                     *
-                     *   [no extension] previous_kmer
-                         *   X              O------------- ... ---starting_kmer
-                     *                  \_....
-                     * 
-                     *   so, by looking one k-mer ahead, we make sure that previous_kmer only branches to the right
-                     *
-                     */
-                    set<kmer_type> all_involved_extensions;
-                    Terminator *save_terminator = terminator;
-                    terminator = NULL; // do not use terminator in the following bubble traversal
-                    if (explore_branching(previous_kmer, 1-previous_strand, (char*)useless_string, useless_int, current_kmer, &all_involved_extensions))
-                    {
-                        if (debug) printf("depth %d useless int %d and starting belongs %d nb involved nodes %d\n",frontline.depth,useless_int,all_involved_extensions.find(starting_kmer) != all_involved_extensions.end(),all_involved_extensions.size());
-                        if (all_involved_extensions.find(starting_kmer) != all_involved_extensions.end())
-                        {
-                            terminator = save_terminator;
-                            return false; // starting_kmer is in a tip/bubble starting from current_kmer
-                        }
-                        
-                    }
-                    terminator = save_terminator;
-                }
-            }
-            // update previous_kmer
-            if (frontline.size() == 1)
-            {
-                node current_node = frontline.front();
-                kmer_type current_kmer = current_node.kmer;
-                previous_kmer = current_kmer;
-                previous_strand = current_node.strand;
-            }
-            else
-                previous_kmer = 0;
-        }
-        while (1);
-
-        if (debug) printf("strand %d depth %d\n",strand,frontline.depth);
-        sum_depths += frontline.depth;
-    }
-    
-    // don't even assemble those regions which have no chance to yield a long contig
-    if (sum_depths < (sizeKmer+1))
-        return false;
-
-    return true;
-}
-
 // main traversal function, which calls avance()
 // important:
 // for MonumentTraversal, either "previous_kmer" is unspecified and then "starting_kmer" is required to be non-branching,
@@ -653,11 +541,6 @@ char Traversal::random_unmarked_avance(kmer_type kmer, int current_strand, bool 
     return 0;
 }
 
-char RandomBranchingTraversal::avance(kmer_type kmer, int current_strand, bool first_extension, char * newNT, kmer_type previous_kmer)
-{
-    return random_unmarked_avance(kmer,current_strand,first_extension,newNT);
-}
-
 // ----------------
 // simple paths traversal
 // invariant: the input kmer has no in-branching.
@@ -666,6 +549,75 @@ char RandomBranchingTraversal::avance(kmer_type kmer, int current_strand, bool f
 // 0 if a deadend was reached
 // -1 if out-branching was detected
 // -2 if no out-branching but next kmer has in-branching
+KmerColour Traversal::GetColour(kmer_type kmer){
+	KmerColour colour;
+//	fprintf(stderr, "Kmer:%ld  C:%u\n",kmer, colour);
+	bool exist = hash->get_colour(kmer, &colour);
+	if (exist){
+		return colour;
+	}
+	else{
+//		fprintf(stderr, "Kmer:%ld Does not exist. C:%u\n",kmer, colour);
+		kmer_type rev_kmer = revcomp(kmer);
+		exist = hash->get_colour(rev_kmer, &colour);
+//		fprintf(stderr, "RevComp:%ld\t%u\t\n", revcomp_new_graine, colour);
+		if (exist){
+			fprintf(stderr, "RevComp:%ld\t%u\t\n", rev_kmer	, colour);
+			return colour;
+		}
+		else{
+//			fprintf(stderr, "BOTH dir fail!!:%ld\t%u\t\n", revcomp_new_graine, colour);
+//			exit(-1);
+			colour=9;
+			return colour;
+		}
+	}
+
+
+}
+
+
+KmerColour Traversal::GetColour(kmer_type kmer, KmerColour *colour){
+	bool exist = hash->get_colour(kmer, colour);
+	if (!exist) {
+		kmer_type rev_kmer = revcomp(kmer);
+		exist = hash->get_colour(rev_kmer, colour);
+		if (!exist) {
+			*colour = 9;
+		}
+		else{
+			printf("Found colour on revcomp!! can this actually happen??\nkmer:%lu r:%lu\n",kmer, rev_kmer);
+		}
+	}
+	return *colour;
+
+//	if (exist) {
+//		return *colour;
+//	}
+//	else{
+////		fprintf(stderr, "Kmer:%ld Does not exist. C:%u\n", kmer, *colour);
+//		kmer_type revcomp_new_graine = revcomp(kmer);
+//		bool exist = hash->get_colour(revcomp_new_graine, colour);
+//		kmer_type rev_rev = revcomp(revcomp_new_graine);
+//		if (exist) {
+//			kmer_type rev_rev = revcomp(revcomp_new_graine);
+//			fprintf(stderr, "RevComp EXIST:%ld\t%ld\t%u\t\n", revcomp_new_graine, rev_rev, *colour);
+//
+//			return *colour;
+//			//			2005228447435396837
+//		}
+//
+//		else {
+////			Kmer:2005228447435396837 Does not exist. C
+////			RevComp:4345899215275863891 does not exist:2005228447435396837
+////			fprintf(stderr, "BOTH FAIL!!RevComp:%ld does not exist:%ld\t%u\t\n", revcomp_new_graine, rev_rev, *colour);
+////			exit(-1);
+//			*colour=9;
+//		}
+//	}
+
+}
+
 char bin2NT[4] = {'A','C','T','G'};
 int Traversal::simple_paths_avance(kmer_type kmer, int strand, bool first_extension, char * newNT)
 {
@@ -797,74 +749,10 @@ int Traversal::simple_paths_avance_colour(kmer_type kmer, int strand, bool first
 
 
 
-KmerColour Traversal::GetColour(kmer_type kmer, KmerColour *colour){
-	bool exist = hash->get_colour(kmer, colour);
-	if (!exist) {
-		kmer_type rev_kmer = revcomp(kmer);
-		exist = hash->get_colour(rev_kmer, colour);
-		if (!exist) {
-			*colour = 9;
-		}
-		else{
-			printf("Found colour on revcomp!! can this actually happen??\nkmer:%lu r:%lu\n",kmer, rev_kmer);
-		}
-	}
-	return *colour;
-
-//	if (exist) {
-//		return *colour;
-//	}
-//	else{
-////		fprintf(stderr, "Kmer:%ld Does not exist. C:%u\n", kmer, *colour);
-//		kmer_type revcomp_new_graine = revcomp(kmer);
-//		bool exist = hash->get_colour(revcomp_new_graine, colour);
-//		kmer_type rev_rev = revcomp(revcomp_new_graine);
-//		if (exist) {
-//			kmer_type rev_rev = revcomp(revcomp_new_graine);
-//			fprintf(stderr, "RevComp EXIST:%ld\t%ld\t%u\t\n", revcomp_new_graine, rev_rev, *colour);
-//
-//			return *colour;
-//			//			2005228447435396837
-//		}
-//
-//		else {
-////			Kmer:2005228447435396837 Does not exist. C
-////			RevComp:4345899215275863891 does not exist:2005228447435396837
-////			fprintf(stderr, "BOTH FAIL!!RevComp:%ld does not exist:%ld\t%u\t\n", revcomp_new_graine, rev_rev, *colour);
-////			exit(-1);
-//			*colour=9;
-//		}
-//	}
-
+char RandomBranchingTraversal::avance(kmer_type kmer, int current_strand, bool first_extension, char * newNT, kmer_type previous_kmer)
+{
+    return random_unmarked_avance(kmer,current_strand,first_extension,newNT);
 }
-
-KmerColour Traversal::GetColour(kmer_type kmer){
-	KmerColour colour;
-//	fprintf(stderr, "Kmer:%ld  C:%u\n",kmer, colour);
-	bool exist = hash->get_colour(kmer, &colour);
-	if (exist){
-		return colour;
-	}
-	else{
-//		fprintf(stderr, "Kmer:%ld Does not exist. C:%u\n",kmer, colour);
-		kmer_type rev_kmer = revcomp(kmer);
-		exist = hash->get_colour(rev_kmer, &colour);
-//		fprintf(stderr, "RevComp:%ld\t%u\t\n", revcomp_new_graine, colour);
-		if (exist){
-			fprintf(stderr, "RevComp:%ld\t%u\t\n", rev_kmer	, colour);
-			return colour;
-		}
-		else{
-//			fprintf(stderr, "BOTH dir fail!!:%ld\t%u\t\n", revcomp_new_graine, colour);
-//			exit(-1);
-			colour=9;
-			return colour;
-		}
-	}
-
-
-}
-
 
 char SimplePathsTraversal::avance(kmer_type kmer, int current_strand, bool first_extension, char * newNT, kmer_type previous_kmer)
 {
@@ -1020,6 +908,119 @@ bool Frontline::check_inbranching(kmer_type from_kmer, int from_strand)
 
 // similar to Monument's extension_graph.py:find_end_of_branching
 // basically do a bounded-depth, bounded-breadth BFS
+bool MonumentTraversal::find_starting_kmer(kmer_type branching_kmer, kmer_type &starting_kmer)
+{
+
+    char newNT[2];
+    int nt;
+    bool debug=false;
+    int sum_depths = 0;
+
+    if (!get_new_starting_node_improved(branching_kmer, starting_kmer))
+        return false;
+
+    if (debug) printf("getting new starting kmer\n");
+
+    for (int strand = 0; strand<2 ; strand++)
+    {
+        kmer_type previous_kmer = 0;
+        int previous_strand = 0;
+
+        // do a BFS to make sure we're not inside a bubble or tip
+        Frontline frontline( starting_kmer, strand, bloom, debloom, terminator, NULL, 0, false);
+
+        do
+        {
+            bool should_continue = frontline.go_next_depth();
+            if (!should_continue)
+            {
+                if (debug) printf("strand %d shouldnt continue\n");
+                break;
+            }
+
+            // put the same contraints as in a bubble
+            if (frontline.depth > max_depth || frontline.size() > max_breadth)
+            {
+                if (debug) printf("strand %d reached max depth or breadth (%d %d)\n",strand, frontline.depth,frontline.size());
+                break;
+            }
+
+            // stopping condition: nothing more to explore
+            if (frontline.size() == 0)
+            {
+                if (debug) printf("strand %d nothing more to explore\n");
+                break;
+            }
+
+            char useless_string[max_depth+1];
+            int useless_int;
+
+            if (frontline.size() <= 1)
+            {
+                kmer_type current_kmer = 0;
+                if (frontline.size() == 1)
+                {
+                    node current_node = frontline.front();
+                    current_kmer = current_node.kmer;
+                }
+
+                if ((previous_kmer != 0) && terminator->is_branching(previous_kmer))
+                {
+                    /* the current situation is:
+                     *
+                     *    current_kmer  previous_kmer
+                     *   -O-------------O------------- ... ---starting_kmer
+                     *                  \_....
+                     *
+                     * or
+                     *
+                     *   [no extension] previous_kmer
+                         *   X              O------------- ... ---starting_kmer
+                     *                  \_....
+                     *
+                     *   so, by looking one k-mer ahead, we make sure that previous_kmer only branches to the right
+                     *
+                     */
+                    set<kmer_type> all_involved_extensions;
+                    Terminator *save_terminator = terminator;
+                    terminator = NULL; // do not use terminator in the following bubble traversal
+                    if (explore_branching(previous_kmer, 1-previous_strand, (char*)useless_string, useless_int, current_kmer, &all_involved_extensions))
+                    {
+                        if (debug) printf("depth %d useless int %d and starting belongs %d nb involved nodes %d\n",frontline.depth,useless_int,all_involved_extensions.find(starting_kmer) != all_involved_extensions.end(),all_involved_extensions.size());
+                        if (all_involved_extensions.find(starting_kmer) != all_involved_extensions.end())
+                        {
+                            terminator = save_terminator;
+                            return false; // starting_kmer is in a tip/bubble starting from current_kmer
+                        }
+
+                    }
+                    terminator = save_terminator;
+                }
+            }
+            // update previous_kmer
+            if (frontline.size() == 1)
+            {
+                node current_node = frontline.front();
+                kmer_type current_kmer = current_node.kmer;
+                previous_kmer = current_kmer;
+                previous_strand = current_node.strand;
+            }
+            else
+                previous_kmer = 0;
+        }
+        while (1);
+
+        if (debug) printf("strand %d depth %d\n",strand,frontline.depth);
+        sum_depths += frontline.depth;
+    }
+
+    // don't even assemble those regions which have no chance to yield a long contig
+    if (sum_depths < (sizeKmer+1))
+        return false;
+
+    return true;
+}
+
 int MonumentTraversal::find_end_of_branching(kmer_type starting_kmer,
 		int starting_strand, kmer_type &end_kmer, int &end_strand,
 		kmer_type previous_kmer, set<kmer_type> *all_involved_extensions) {
@@ -1431,5 +1432,4 @@ char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand, bool f
 }
 
 MonumentTraversal::~MonumentTraversal(){
-	printf("}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}\n");
 }

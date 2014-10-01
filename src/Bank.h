@@ -117,9 +117,10 @@ class BinaryBank
         off_t nb_elements();
         off_t file_size();
 
-        size_t ReadKmer( void *element);
-        size_t ReadColour( void *element);
-        size_t ReadKmer_skip_colour( void *element);
+        size_t read_kmer( void *element);
+        size_t read_colour( void *element);
+        size_t read_kmer_colour(void *element, void* element2);
+        size_t read_kmer_skip_colour( void *element);
 
         int get_sizeElement(){ return sizeElement; };
         ~BinaryBank();

@@ -81,6 +81,19 @@ inline uint64_t AbstractOAHash::hashcode( uint64_t elem )
     
 }
 
+uint64_t AbstractOAHash::static_hashcode(uint64_t elem){
+	uint64_t code = elem;
+
+	code = code ^ (code >> 14); //supp
+	code = (~code) + (code << 18);
+	code = code ^ (code >> 31);
+	code = code * 21;
+	code = code ^ (code >> 11);
+	code = code + (code << 6);
+	code = code ^ (code >> 22);
+
+	return code;
+}
 
 float AbstractOAHash::load_factor()
 {
@@ -142,6 +155,8 @@ bool OAHash::is_occupied(element_pair *element)
 }
 
 
+
+
 OAHash::element_pair * OAHash::find_slot(key_type key)
 {
     uint64_t ptr = hashcode(key) % hash_size; 
@@ -166,6 +181,11 @@ OAHash::element_pair * OAHash::find_slot(key_type key)
 
 //if graine already here, overwrite old value
 // increment the value of a graine
+bool OAHash::has_key(key_type graine)
+{
+    return get(graine, NULL);
+}
+
 void OAHash::increment(key_type graine)
 {
     element_pair *element = find_slot(graine);
@@ -189,11 +209,6 @@ void OAHash::insert(key_type graine, int value)
     element->value = value;
 
 }
-bool OAHash::has_key(key_type graine)
-{
-    return get(graine, NULL);
-}
-
 bool OAHash::get( key_type graine, int * val)
 {
     element_pair *element = find_slot(graine);

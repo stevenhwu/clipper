@@ -129,12 +129,21 @@ bool AssocSet::next_iterator()
 
 void AssocSet::print_total_size()
 {
+	total_memory = get_total_memory();
     printf("Assoc set size: %li\n",liste.size());
     printf("Assoc set capacity: listekmer %li  liste val %li\n",liste.capacity(),liste_value.capacity());
-    printf("%li *%li  + %li* %li =  %li MB \n",liste.capacity(),sizeof(set_elem),liste_value.capacity(),sizeof(set_value_t),
-            (liste.capacity()*sizeof(set_elem)+liste_value.capacity()*sizeof(set_value_t))/1024/1024
+
+    printf("%li *%li  + %li* %li =  %li MB (%li bits)\n",liste.capacity(),sizeof(set_elem),liste_value.capacity(),sizeof(set_value_t),
+            total_memory/1024/1024, total_memory
           );
+
 }
+
+uint64_t AssocSet::get_total_memory() {
+	total_memory = (liste.capacity()*sizeof(set_elem)+liste_value.capacity()*sizeof(set_value_t)); //FIXME:Actually this is a really bad place to declare this!!!
+	return total_memory;
+}
+
 
 void AssocSet::clear()
 {
@@ -301,3 +310,25 @@ void AssocPairedSet::print_total_size()
     
 }
 
+
+
+bool FPSetCascading4::contains(set_elem elemn) {
+	if (bloom2->contains(elemn)) {
+		if (!bloom3->contains(elemn))
+			return true;
+		else if (bloom4->contains(elemn) && !false_positives->contains(elemn))
+			return true;
+	}
+	return false;
+}
+;
+bool FPSetCascading4::is_false_positive(set_elem elemn) {
+	return contains(elemn);
+};
+
+uint64_t FPSetCascading4::get_total_memory() {
+	return total_memory;
+}
+void FPSetCascading4::set_total_memory(uint64_t memory){
+	total_memory = memory;
+}

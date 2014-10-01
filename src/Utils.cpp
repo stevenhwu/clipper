@@ -81,7 +81,7 @@ void bloom_pass_reads(Bank *Sequences, T *bloom_to_insert, U *bloom_counter, cha
 template <typename T> // T can be Bloom, BloomCpt or BloomCpt3
 void bloom_pass_reads_binary(T *bloom_to_insert, BloomCpt *bloom_counter, char *stderr_message)
 {
-  fprintf(stderr,"binary pass \n");
+  fprintf(stderr,"binary pass read to bloom\n");
   int64_t NbRead = 0;
   int64_t NbInsertedKmers = 0;
   kmer_type kmer;
@@ -104,6 +104,36 @@ void bloom_pass_reads_binary(T *bloom_to_insert, BloomCpt *bloom_counter, char *
   
 }
 
+
+
+template <typename T> // T can be Bloom, BloomCpt or BloomCpt3
+void bloom_pass_reads_binary_partition(T *bloom_to_insert,
+		BloomCpt *bloom_counter, char *solid_kmer_partition_file, char *stderr_message) {
+//  fprintf(stderr,"binary pass read to bloom partition:%s\n",solid_kmer_partition_file);
+printf("binary pass read to bloom partition:%s\n",solid_kmer_partition_file);
+  int64_t NbRead = 0;
+  int64_t NbInsertedKmers = 0;
+  kmer_type kmer;
+  KmerColour kmer_colour;
+  // read solid kmers from disk
+//  BinaryBank * SolidKmers = new BinaryBank(return_file_name(solid_kmers_file),sizeof(kmer),0);
+
+  BinaryBank *solid_kmer_colour = new BinaryBank(return_file_name(solid_kmer_partition_file),sizeof(kmer_type)+sizeof(KmerColour),0);
+//  printf("summary:%d %d\n", solid_kmer_colour->nb_elements(), solid_kmer_colour->file_size());
+  while(solid_kmer_colour->read_kmer_colour(&kmer, &kmer_colour))
+    {
+      // printf("kmer %lld\n",kmer);
+      bloom_to_insert->add(kmer);
+      NbInsertedKmers++;
+      NbRead++;
+
+      if ((NbRead% table_print_frequency )==0) fprintf (stderr,stderr_message,13,(long long)NbRead);
+
+    }
+  fprintf (stderr,"\nInserted %lld %s kmers in the bloom structure.\n",(long long)NbInsertedKmers,"solid");
+  solid_kmer_colour->close();
+
+}
 int estimated_BL1;
 uint64_t estimated_BL1_freesize;
 
@@ -147,7 +177,6 @@ Bloom *bloom_create_bloo1(T *bloom_counter, bool from_dump)
 #endif
 
     bloo1->set_number_of_hash_func((int)floorf(0.7*NBITS_PER_KMER));
-
     if (from_dump)
         bloo1->load(return_file_name(bloom_file)); // just load the dump 
     else
@@ -157,7 +186,61 @@ Bloom *bloom_create_bloo1(T *bloom_counter, bool from_dump)
         SolidKmers->close();
     }
 
+    if(!from_dump){
+    	bloo1-> dump(return_file_name(bloom_file));
+    }
     return bloo1;    
+}
+
+// loading bloom from disk
+template <typename T> //bloocpt or bloocpt3
+Bloom *bloom_create_bloo1_partition(T *bloom_counter, char *solid_kmer_partition_file, bool from_dump)
+{
+printf("In bloom_create_bloo1_partition: %s\n", solid_kmer_partition_file);
+    BinaryBank * solid_kmer_colour;
+//	solid_kmer_colour->rewind_all();
+//    if(from_dump && nsolids) // from dump and known number of solid kmers
+//    {
+//        //nsolids is sotred in a config file
+//        //number of solid kmers cannot be computed precisely from bloom file, imprecision of 0-7
+//        estimated_BL1 = max( (int)ceilf(log2f(nsolids*NBITS_PER_KMER)), 1);
+//        estimated_BL1_freesize =  (uint64_t)(nsolids*NBITS_PER_KMER);
+//    }
+//    else
+//    {
+        // get true number of solid kmers, in order to precisely size the bloom filter
+    	solid_kmer_colour = new BinaryBank(return_file_name(solid_kmer_partition_file),sizeof(kmer_type)+sizeof(KmerColour),0);
+        estimated_BL1 = max( (int)ceilf(log2f(solid_kmer_colour->nb_elements()*NBITS_PER_KMER)), 1);
+        estimated_BL1_freesize =  (uint64_t)(solid_kmer_colour->nb_elements()*NBITS_PER_KMER);
+        printf("nelem %lli nbits %g \n",(long long)(solid_kmer_colour->nb_elements()),NBITS_PER_KMER);
+//    }
+
+    //printf("Allocating %0.1f MB of memory for the main Bloom structure (%g bits/kmer)\n",(1LL<<estimated_BL1)/1024.0/1024.0/8.0,NBITS_PER_KMER);
+    if(estimated_BL1_freesize ==0) estimated_BL1_freesize =10;
+
+    printf("freesize %lli estimated_BL1_freesize  %0.1f MB of memory for the main Bloom structure (%g bits/kmer)\n",(long long)estimated_BL1_freesize,(estimated_BL1_freesize)/1024.0/1024.0/8.0,NBITS_PER_KMER);
+
+    Bloom *bloo1;
+#if CUSTOMSIZE
+    bloo1 = new Bloom((uint64_t)estimated_BL1_freesize);
+#else
+    bloo1 = new Bloom(estimated_BL1);
+#endif
+
+char tempfile[256];
+sprintf(tempfile, "%s_%s", solid_kmer_partition_file,bloom_file);
+    bloo1->set_number_of_hash_func((int)floorf(0.7*NBITS_PER_KMER));
+    if (from_dump)
+        bloo1->load(return_file_name(tempfile)); // just load the dump
+    else
+    {
+        bloom_pass_reads_binary_partition(bloo1, bloom_counter, solid_kmer_partition_file, (char*)"%cInsert solid Kmers in Bloom %lld"); // use the method reading SolidKmers binary file, was useful when varying Bloom size (!= dumped size)
+        //bloo1->dump(return_file_name(bloom_file)); // create bloom dump
+        solid_kmer_colour->close();
+
+    	bloo1-> dump(return_file_name(tempfile));
+    }
+    return bloo1;
 }
 
 // wrapper for default behavior: don't load from dump
@@ -170,6 +253,9 @@ Bloom *bloom_create_bloo1(T *bloom_counter)
 template Bloom *bloom_create_bloo1<BloomCpt>(BloomCpt *bloom_counter); // trick to avoid linker errors: http://www.parashift.com/c++-faq-lite/templates.html#faq-35.13
 template Bloom *bloom_create_bloo1<BloomCpt>(BloomCpt *bloom_counter, bool from_dump); 
 
+template Bloom *bloom_create_bloo1_partition<BloomCpt>(BloomCpt *bloom_counter,
+		char *solid_kmer_partition_file, bool from_dump);
+//Bloom *bloom_create_bloo1(T *bloom_counter, BinaryBank *solid_kmer_colour, bool from_dump)
 // --------------------------------------------------------------------------------
 // below this line: unused kmer counting code
 

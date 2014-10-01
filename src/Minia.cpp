@@ -36,7 +36,7 @@ using namespace std;
 
 int max_memory; // the most memory one should alloc at any time, in MB
 int order = 0; // deblooming order; 0 = debloom everything; 1 = don't debloom 1-node tips (experimental, untested, shouldn't work);// (made extern int in Traversal.h)
-
+//ALWAYS 0 NOW!!
 int64_t genome_size;
 Bloom * bloo1;
 
@@ -313,6 +313,7 @@ inline void assembleMulti()
     KmerColour *contig_colour   = (KmerColour *) malloc(2*(maxlen+sizeKmer)*sizeof(KmerColour));
 
     kmer_type kmer;
+    KmerColour kmer_colour;
 
     long long nbContig =0;
     long long totalnt=0;
@@ -330,7 +331,7 @@ inline void assembleMulti()
     STARTWALL(assembly);
 
     char *assemble_only_one_region = NULL; // debugging, set to a ASCII kmer to activate, NULL to desactivate
-    bool LOAD_BRANCHING_KMERS=false; // debugging
+    bool LOAD_BRANCHING_KMERS=true; // debugging
     bool DUMP_BRANCHING_KMERS=false;
 
     BranchingTerminator *terminator;
@@ -345,9 +346,9 @@ inline void assembleMulti()
 		BranchingKmers->close();
     }
     else{
-    	terminator = new BranchingTerminatorColour(SolidKmers,
-    				genome_size, bloo1, false_positives);
-
+//    	terminator = new BranchingTerminatorColour(SolidKmers,
+//    				genome_size, bloo1, false_positives);
+//printf("++++++++++++++++++++++++++++++++++++++++++++++++++\n");
 		terminator = new BranchingTerminatorColour(solid_kmers_colour,
 				genome_size, bloo1, false_positives);
     }
@@ -357,7 +358,6 @@ inline void assembleMulti()
         terminator->dump_branching_kmers(BranchingKmers);
         BranchingKmers->close();
     }
-    printf("Check boolean:%i\t%i\n", LOAD_BRANCHING_KMERS, DUMP_BRANCHING_KMERS);
 
 #ifdef UNITIG
     SimplePathsTraversal *traversal = new SimplePathsTraversal(bloo1,false_positives,terminator);
@@ -365,11 +365,163 @@ inline void assembleMulti()
 #else
     MonumentTraversal *traversal = new MonumentTraversal(bloo1,false_positives,terminator);
 #endif
-    //RandomBranchingTraversal *traversal = new RandomBranchingTraversal(bloo1,false_positives,terminator);
+//    RandomBranchingTraversal *traversal = new RandomBranchingTraversal(bloo1,false_positives,terminator);
     traversal->set_maxlen(maxlen);
     traversal->set_max_depth(500);
     traversal->set_max_breadth(20);
-    traversal->SetSolidKmersColour(solid_kmers_colour, max_memory);
+//    traversal->SetSolidKmersColour(solid_kmers_colour, max_memory);
+
+    printf("\nMemory usage:\n");
+	uint64_t min_solid = (1 * solid_kmers_colour->nb_elements()
+			* OAHashColour::size_entry()	);
+	printf("Bloom structure: %" PRId64" (Divided up bloom, recalculate FP&Terminator\n",  bloo1->tai);
+	printf("Terminator: %" PRId64"\n", terminator-> get_total_memory());
+
+    printf("false_positives: %" PRId64"\n", false_positives->get_total_memory() );
+
+    printf("Soldi_kmer_colour: %" PRId64" to %" PRId64"\n", min_solid, min_solid*2);
+
+    printf("MonumentTraversal: %" PRId64" bloom+debloom+terminator + (colour)\n", 0);
+
+	uint64_t total = bloo1->tai + terminator-> get_total_memory() + false_positives->get_total_memory();
+printf("Initial max: %" PRId64"\n", total);
+uint64_t estimated_bloom_size = (uint64_t) (genome_size * NBITS_PER_KMER);
+printf("Memory_max: %" PRId64" in Mb %d\n",estimated_bloom_size , max_memory);
+    printf("END---------Check boolean:%i\t%i\n", LOAD_BRANCHING_KMERS, DUMP_BRANCHING_KMERS);
+
+
+    printf("Split into loop\n");
+    int nb_partitions = 2;
+    char solid_kmer_partition_file[nb_partitions][256];
+//	char redundant_colour_filename[nb_partitions][256];
+    BinaryBank *solid_kmers_colour_partition[nb_partitions];
+    long distinct_kmers_per_partition[nb_partitions];
+	for (int p=0;p<nb_partitions;p++)
+	{
+		sprintf(solid_kmer_partition_file[p] ,"%s_partition_%d", solid_kmers_colour_file, p);
+		printf("%s:%s\n", solid_kmer_partition_file[p], solid_kmers_colour_file);
+		solid_kmers_colour_partition[p] = new BinaryBank(
+				return_file_name(solid_kmer_partition_file[p]),
+				kSizeOfKmerType + kSizeOfKmerColour, 1);
+		distinct_kmers_per_partition[p]=0;
+	}
+
+//	BinaryBank *solid_kmers_colour = new BinaryBank(return_file_name(solid_kmers_colour_file), kSizeOfKmerType+kSizeOfKmerColour, 0);
+
+//	kmer_type kmer;
+//	KmerColour kmer_colour;
+	solid_kmers_colour->rewind_all();
+	total = 0;
+//    delete terminator;
+//    delete traversal;
+	for (int p=0;p<nb_partitions;p++){
+
+    	while( solid_kmers_colour-> read_kmer_colour(&kmer, &kmer_colour)){
+    		kmer_type kmer_hash  = AbstractOAHash::static_hashcode(kmer);
+    		int index = kmer_hash % nb_partitions;
+    		if(index>nb_partitions){
+    			printf("%d %lu %u", total, kmer, kmer_colour);
+    			break;
+    		}
+    		total ++;
+    		distinct_kmers_per_partition[index]++;
+    		solid_kmers_colour_partition[index]-> write(&kmer, kSizeOfKmerType);
+    		solid_kmers_colour_partition[index]-> write(&kmer_colour, kSizeOfKmerColour);
+    	}
+
+//		BinaryBank *solid_kmers_colour_partition = new BinaryBank(
+//				return_file_name(solid_kmer_partition_file[p]),
+//				kSizeOfKmerType + kSizeOfKmerColour, 0);
+
+    }
+	solid_kmers_colour->close();
+	long int total2 = 0;
+	for (int p=0;p<nb_partitions;p++) {
+		printf("Size for p%d:%ld\n",p, distinct_kmers_per_partition[p]);
+		total2 += distinct_kmers_per_partition[p];
+		solid_kmers_colour_partition[p]->close();
+		solid_kmers_colour_partition[p] = new BinaryBank(
+						return_file_name(solid_kmer_partition_file[p]),
+						kSizeOfKmerType + kSizeOfKmerColour, 0);
+	}
+	printf("Total:%d\t%d\n",total, total2);
+
+	for (int p=0;p<nb_partitions;p++) {
+
+//	debloom(order, max_memory);
+	bloo1 = bloom_create_bloo1_partition((BloomCpt *)NULL, solid_kmer_partition_file[p], false);
+    debloom_partition(solid_kmer_partition_file[p], max_memory);
+
+//    Bloom *bloo1 = bloom_create_bloo1((BloomCpt *)NULL);
+
+
+	false_positives = load_false_positives_cascading4();
+	printf("Done false positive\n");
+//	solid_kmers_colour_partition[p] = new BinaryBank(return_file_name(solid_kmer_partition_file[p]),sizeof(kmer_type)+sizeof(KmerColour),0);
+	BranchingTerminator *terminator1 = new BranchingTerminatorColour(solid_kmers_colour_partition[p],
+					genome_size, bloo1, false_positives);
+	printf("Done terminator\n");
+	traversal = new MonumentTraversal(bloo1,false_positives,terminator);
+	    traversal->set_maxlen(maxlen);
+	    traversal->set_max_depth(500);
+	    traversal->set_max_breadth(20);
+////	    traversal->SetSolidKmersColour(solid_kmers_colour, max_memory);
+//
+	uint64_t estimated_bloom_size = (uint64_t) (genome_size * NBITS_PER_KMER);
+	printf("Memory_max: %" PRId64" in Mb %d\n",estimated_bloom_size , max_memory);
+		uint64_t total = bloo1->tai + terminator1-> get_total_memory() + false_positives->get_total_memory();
+	printf("Initial max: %" PRId64"\n", total);
+
+//
+//
+    delete terminator1;
+    delete bloo1;
+    delete false_positives;
+//    delete traversal;
+	printf("\n========================================\n");
+	}
+exit(-1);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    exit(-1);
 
     while (terminator->next(&kmer))
     {
@@ -636,12 +788,12 @@ int main(int argc, char *argv[])
    if(argc >=  5)
     {
        genome_size  = atoll(argv[4]);
-      // int estimated_bloom_size = max( (int)ceilf(log2f(genome_size * NBITS_PER_KMER )), 1);
+//       int estimated_bloom_size = max( (int)ceilf(log2f(genome_size * NBITS_PER_KMER )), 1);
         uint64_t estimated_bloom_size = (uint64_t) (genome_size * NBITS_PER_KMER);
 
        uint64_t estimated_nb_FP =  (uint64_t)(genome_size * 4 * powf(0.6,11)); // just indicative
     
-       //max_memory = max( (1LL << estimated_bloom_size)/8LL /1024LL/1024LL, 1LL );
+//       max_memory = max( (1LL << estimated_bloom_size)/8LL /1024LL/1024LL, 1LL );
         max_memory =  max((int64_t) estimated_bloom_size/8LL /1024LL/1024LL,1LL);
 
       printf("estimated values: nbits Bloom %" PRId64 ", nb FP %" PRId64 ", max memory %i MB\n",estimated_bloom_size,estimated_nb_FP,max_memory);
@@ -685,27 +837,31 @@ printf("==========START_FROM_SOLID_KMERS\n");
     // debloom, write false positives to disk, insert them into false_positives
 
     if (! LOAD_FALSE_POSITIVE_KMERS)
-    {printf("==========LOAD_FALSE_+ve_KMERS\n");//Don't think we need to add colour to this section, double check LATER
+    {
+    	printf("==========LOAD_FALSE_+ve_KMERS\n");//Don't think we need to add colour to this section, double check LATER
         debloom(order, max_memory);
     }
     printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
+
+	int LOAD_BLOOM_FROM_DUMP = 0;
+    if(!LOAD_BLOOM_FROM_DUMP){} //TODO later
     bloo1 = bloom_create_bloo1((BloomCpt *)NULL, false);
 
 
-//    FOUR_BLOOM_VERSION = 1;
+    FOUR_BLOOM_VERSION = 1;//Save memory
 	if (!NO_FALSE_POSITIVES_AT_ALL) { //TODO: deal with this later, use dummy_false_positivies()
-		printf("===============NO_FALSE_+ve_KMERS\n");
+		printf("===============!NO_FALSE_+ve_KMERS\n");
 		// load false positives from disk into false_positives
 		if (!FOUR_BLOOM_VERSION){
 			printf("===============NoFourBloom\n");
-			false_positives = load_false_positives();
+			false_positives = load_false_positives();//Memory: nb_fp * 64 bits
 		}
 		else{
 			printf("===============FourBloomVersion\n");
 			false_positives = load_false_positives_cascading4();
 		}
 	} else {
-		printf("=============else NO_FALSE_+ve_KMERS: titus mode\n");
+		printf("=============else NO_FALSE_+ve_KMERS: titus mode: no FP's\n");
 		// titus mode: no FP's
 		false_positives = dummy_false_positives();
 	}

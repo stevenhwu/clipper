@@ -255,6 +255,10 @@ bool BranchingTerminator::is_indexed(kmer_type graine)
 {
   return branching_kmers->contains(graine);
 }
+BranchingTerminator::BranchingTerminator(BinaryBank *given_SolidKmers,
+		Bloom *given_bloom, Set *given_debloom) :
+		Terminator(given_SolidKmers, given_bloom, given_debloom) {
+}
 
 BranchingTerminator::BranchingTerminator(BinaryBank *given_SolidKmers,
 		uint64_t genome_size, Bloom *given_bloom, Set *given_debloom) :
@@ -292,6 +296,8 @@ BranchingTerminator::BranchingTerminator(BinaryBank *given_SolidKmers,
 
     // call Hash16 constructor
     // branching_kmers = new Hash16(estimated_NBITS_TERMINATOR);
+
+
     branching_kmers = new AssocSet();
 
     // index, once and for all, all the branching solid kmers
@@ -324,11 +330,12 @@ BranchingTerminator::BranchingTerminator(BinaryBank *given_SolidKmers,
 
 	branching_kmers->finalize();
 	branching_kmers->print_total_size();
+	total_memory = branching_kmers->get_total_memory();
     fprintf (stderr,"\n\nAllocated memory for marking: %lld branching kmers x (%d+%d )B \n",nb_branching_kmers,sizeof(kmer_type),sizeof(set_value_t));
     fprintf (stderr," actual implementation:  (sizeof(kmer_type) = %d B) + (sizeof(set_value_t) = %d B) per entry:  %.2f bits / solid kmer\n",sizeof(kmer_type),sizeof(set_value_t),(nb_branching_kmers*((sizeof(kmer_type)+sizeof(set_value_t))*8.0))/nb_solid_kmers);
 
     // init branching_kmers iterator for what happens next
-     branching_kmers->start_iterator(); 
+     branching_kmers->start_iterator();
 }
 
 // constructor that simply loads a dump of branching kmers
@@ -354,11 +361,6 @@ BranchingTerminator::BranchingTerminator(BinaryBank *branchingKmers, BinaryBank 
 
     // init branching_kmers iterator for what happens next
     branching_kmers->start_iterator(); 
-}
-
-BranchingTerminator::~BranchingTerminator()
-{
-    delete branching_kmers;
 }
 
 bool BranchingTerminator::next(kmer_type *kmer)
@@ -394,6 +396,14 @@ void BranchingTerminator::reset()
 {
     branching_kmers->clear(); 
 }
+uint64_t BranchingTerminator::get_total_memory(){
+	return total_memory;
+}
+
+BranchingTerminator::~BranchingTerminator()
+{
+    delete branching_kmers;
+}
 
 //--------------------------------------------------------
 
@@ -428,21 +438,22 @@ bool BloomTerminator::next(kmer_type *kmer)
 BranchingTerminatorColour::BranchingTerminatorColour(
 		BinaryBank *given_SolidKmers, uint64_t genome_size, Bloom *given_bloom,
 		Set *given_debloom) :
-		BranchingTerminator(given_SolidKmers, genome_size, given_bloom, given_debloom) {
+		BranchingTerminator(given_SolidKmers, given_bloom, given_debloom) {
 //		Terminator(given_SolidKmers, given_bloom, given_debloom) {
 	kmer_type kmer;
-
+//	delete branching_kmers;
     branching_kmers = new AssocSet();
 
     // index, once and for all, all the branching solid kmers
     SolidKmers->rewind_all();
     nb_branching_kmers = 0;
     uint64_t nb_solid_kmers = 0;
-    printf("solidKmers_got_size:%zu\n", SolidKmers->get_sizeElement());
-    SolidKmers->read_element(&kmer);
-    printf("%s\n",print_kmer(kmer));
-    while (SolidKmers->read_element(&kmer))
+
+    KmerColour kmer_colour;
+
+    while (SolidKmers->read_kmer(&kmer))
     {
+    	SolidKmers->read_colour(&kmer_colour);
         if (is_branching(kmer))
         {
 	  // branching_kmers->insert(kmer,0);
@@ -466,8 +477,16 @@ BranchingTerminatorColour::BranchingTerminatorColour(
 
 	branching_kmers->finalize();
 	branching_kmers->print_total_size();
-    fprintf (stderr,"\n\nAllocated memory for marking: %lld branching kmers x (%d+%d )B \n",nb_branching_kmers,sizeof(kmer_type),sizeof(set_value_t));
-    fprintf (stderr," actual implementation:  (sizeof(kmer_type) = %d B) + (sizeof(set_value_t) = %d B) per entry:  %.2f bits / solid kmer\n",sizeof(kmer_type),sizeof(set_value_t),(nb_branching_kmers*((sizeof(kmer_type)+sizeof(set_value_t))*8.0))/nb_solid_kmers);
+	total_memory = branching_kmers->get_total_memory();
+	fprintf(stderr,
+			"\n\nAllocated memory for marking: %lld branching kmers x (%d+%d )B \n",
+			nb_branching_kmers, sizeof(kmer_type), sizeof(set_value_t));
+	fprintf(stderr,
+			" actual implementation:  (sizeof(kmer_type) = %d B) + (sizeof(set_value_t) = %d B) per entry:  %.2f bits / solid kmer\n",
+			sizeof(kmer_type), sizeof(set_value_t),
+			(nb_branching_kmers
+					* ((sizeof(kmer_type) + sizeof(set_value_t)) * 8.0))
+					/ nb_solid_kmers);
 
     // init branching_kmers iterator for what happens next
      branching_kmers->start_iterator();
@@ -496,6 +515,7 @@ BranchingTerminatorColour::BranchingTerminatorColour(BinaryBank *branchingKmers,
         fprintf (stderr,"\nLoaded %lld branching kmers x %d B =  %.1f MB\n",nb_branching_kmers,sizeof(cell<kmer_type>),((1<<NBITS_TERMINATOR)*sizeof(cell<kmer_type>)*1.0)/1024.0/1024.0);
 
     // init branching_kmers iterator for what happens next
+    total_memory = branching_kmers->get_total_memory();
     branching_kmers->start_iterator();
 }
 BranchingTerminatorColour::~BranchingTerminatorColour(){}

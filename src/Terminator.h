@@ -60,11 +60,16 @@ public:  // is there a way to not repeat the declaration of Terminator functions
 };
 
 class BranchingTerminator:  public Terminator{
+
 protected:
+  uint64_t total_memory;
   bool is_indexed(kmer_type graine);
   int genome_size;
   // Hash16 *branching_kmers;
   AssocSet *branching_kmers;
+  BranchingTerminator(BinaryBank *given_SolidKmers,
+			Bloom *given_bloom, Set *given_debloom);
+
 public:
    bool is_fully_marked(kmer_type graine);
   void mark(kmer_type graine, char nt, int strand);
@@ -76,6 +81,8 @@ public:
     int64_t nb_branching_kmers;
     void dump_branching_kmers(BinaryBank *BranchingKmers);
     void reset();
+
+    uint64_t get_total_memory();
 
 	BranchingTerminator(BinaryBank *given_SolidKmers, uint64_t genome_size,
 			Bloom *given_bloom, Set *given_debloom);

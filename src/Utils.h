@@ -67,7 +67,15 @@ uint64_t extrapolate_distinct_kmers_wrapped(unsigned long nbytes_memory, Bank *R
 void bloom_count(Bank * reads, unsigned long max_memory);
 template<typename T> Bloom *bloom_create_bloo1(T *bloom_counter);
 template<typename T> Bloom *bloom_create_bloo1(T *bloom_counter, bool from_dump);
+
+template<typename T> Bloom *bloom_create_bloo1_partition(T *bloom_counter,char *solid_kmer_partition_file, bool from_dump);
+
 template<typename T>void bloom_pass_reads_binary(T *bloom_to_insert,BloomCpt *bloom_counter,char *stderr_message);
+
+template<typename T>void bloom_pass_reads_binary_partition(T *bloom_to_insert,
+		BloomCpt *bloom_counter, char *solid_kmer_partition_file, char *stderr_message);
+
+
 template<typename T,typename U>void bloom_pass_reads(Bank *Sequences,T *bloom_to_insert,U *bloom_counter,char *stderr_message);
 #endif
 

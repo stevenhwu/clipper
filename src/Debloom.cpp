@@ -174,6 +174,7 @@ int debloom(int order, int max_memory)
     STARTWALL(deb);
 
     double bl1tai =  (double)bloo1->tai ;
+//    printf("Missing var bl1tai:%f\n", bl1tai);
     delete bloo1;
 
     // now that bloo1 is deleted, initialize hasht1
@@ -310,6 +311,14 @@ Set *dummy_false_positives()
 
 Set *load_false_positives_cascading4()
 {
+
+if (nbkmers_solid==0){
+	BinaryBank *SolidKmers = new BinaryBank(return_file_name(solid_kmers_file),sizeof(kmer_type),0);
+	nbkmers_solid = SolidKmers->nb_elements();
+//	b1_size = 20239964;
+//	uint64_t estimated_BL1_freesize =  (uint64_t)(nbkmers_solid*NBITS_PER_KMER);
+
+}
   int64_t NbInsertedKmers;
   char * rseq;
   int readlen;
@@ -434,7 +443,9 @@ Set *load_false_positives_cascading4()
   fclose(T2_file);
 
   printf("\nInserted %lld (estimated, %lld) kmers in T4.\n\n", addKmers, (uint64_t)fp->false_positives->capacity());
-  
+
+  uint64_t total_size = get_FPSetCascading4_size(fp);
+  fp->set_total_memory(total_size);
   print_size_summary(fp);
 
   return fp;
@@ -476,4 +487,157 @@ void print_size_summary(FPSetCascading4 *fp)
   fprintf(stderr,"Size of the Bloom table (B4)  : %.2lf MB\n", toMB((double)size_B4));
   fprintf(stderr,"Size of the FP table (T4)     : %.2lf MB\n", toMB((double)size_T4));
   fprintf(stderr,"      Total %.2lf MB for %lld solid kmers  ==>  %.2lf bits / solid kmer\n\n", toMB(total_size), nbkmers_solid, total_size / nbkmers_solid);
+}
+
+uint64_t get_FPSetCascading4_size (FPSetCascading4 *fp)
+{
+  uint64_t size_B1 = 0,//b1_size, size_B1 is NOT in FP
+    size_B2 = fp->bloom2->tai,
+    size_B3 = fp->bloom3->tai,
+    size_B4 = fp->bloom4->tai,
+    size_T4 = fp->false_positives->capacity() * FPSet::bits_per_element;
+  uint64_t total_size = (size_B1 + size_B2 + size_B3 + size_B4 + size_T4);
+  return total_size;
+}
+
+
+int debloom_partition(char *solid_kmer_partition_file, int max_memory)
+{//ONLY work for order ==0 now.
+    // read bloo1 from disk dump
+
+    Bloom *bloo1 = bloom_create_bloo1_partition((BloomCpt *)NULL, solid_kmer_partition_file, true);
+    //Load from dist
+
+    STARTWALL(pos);
+
+    FILE * debloom_file = fopen(return_file_name("debloom"),"wb+");
+    FILE * debloom_file_2 = fopen(return_file_name("debloom2"),"wb+");
+    FILE * F_tmp;
+
+    F_debloom_read = debloom_file;
+    F_debloom_write = debloom_file_2;
+
+    BinaryBank *solid_kmer_colour = new BinaryBank(return_file_name(solid_kmer_partition_file),sizeof(kmer_type)+sizeof(KmerColour),0);
+
+    uint64_t cc=0;
+    kmer_type new_graine, kmer;
+    KmerColour kmer_colour;
+    int nt;
+
+    uint64_t NbSolidKmer =0;
+    // write all positive extensions in disk file
+
+    while (solid_kmer_colour->read_kmer_colour(&kmer, &kmer_colour))
+    {
+        //8 right extensions   (4F and 4R); left extensions are redundant by revcomplementation
+        for(nt=0; nt<4; nt++)
+        {
+            int strand;
+            for (strand = 0; strand < 2 ; strand++)
+            {
+                int current_strand = strand;
+                new_graine = next_kmer(kmer,nt, &current_strand);
+
+                if(bloo1->contains(new_graine)){   // extension is positive
+                    if (!fwrite(&new_graine, sizeof(new_graine), 1, debloom_file))
+                    {
+                        printf("error: can't fwrite (disk full?)\n");
+                        exit(1);
+                    }
+                    cc++;
+                }
+
+            }
+        }
+        NbSolidKmer++;
+        if ((NbSolidKmer%table_print_frequency)==0) fprintf (stderr,"%c Writing positive Bloom Kmers %lld",13,NbSolidKmer);
+    }
+    nbkmers_solid =  NbSolidKmer; // GUS: it's global now
+
+    fprintf(stderr,"\n%lli kmers written\n",cc);
+
+    STOPWALL(pos,"Write all positive kmers");
+
+    STARTWALL(deb);
+
+    double bl1tai =  (double)bloo1->tai ;
+//    printf("Missing var bl1tai:%f\n", bl1tai);
+    delete bloo1;
+
+    // now that bloo1 is deleted, initialize hasht1
+    int NBITS_HT = max( (int)ceilf(log2f((0.1*max_memory*1024L*1024L)/sizeof(cell_ptr_t))), 1); // set hasht1 cells to occupy 0.1 * [as much mem as poss]
+    hasht1 =new Hash16(NBITS_HT);
+
+    ////////////////////////////////////////////////////////////////   --find false positive, with hash table partitioning
+    uint64_t max_kmer_per_part = (uint64_t) (0.8*max_memory*1024LL*1024LL /sizeof(cell<kmer_type>));
+    //adapter taille ht en fonction
+
+
+    printf("%d partitions will be needed\n",(int)(nbkmers_solid/max_kmer_per_part));
+
+    NbSolidKmer =0;
+    int numpart = 0;
+    solid_kmer_colour->rewind_all();
+
+    // deblooming:
+    // read the list of (non-redundant) solid kmers and load it, in chunks, into a hash table
+    // at each pass, check all the positive extensions and keep those which are not indicated, by the current chunk, as solid kmers
+    // at the end, only the positive extensions which are not solid are kept
+    while (solid_kmer_colour->read_kmer_colour(&kmer, &kmer_colour))
+    {
+        hasht1->add(kmer);
+
+        NbSolidKmer++;
+        if ((NbSolidKmer%table_print_frequency)==0) fprintf (stderr,"%cBuild Hash table %lld",13,NbSolidKmer);
+
+        if(hasht1->nb_elem >max_kmer_per_part) //end partition,  find false positives
+        {
+            fprintf(stderr,"End of debloom partition  %lli / %lld \n",hasht1->nb_elem,max_kmer_per_part);
+
+            end_debloom_partition(false);
+
+            //swap file pointers
+            F_tmp = F_debloom_read;
+            F_debloom_read = F_debloom_write;
+            F_debloom_write = F_tmp;
+            /////////end write files
+
+            //reset hash table
+            hasht1->empty_all();
+
+            fprintf(stderr,"\n%lli false positives written , partition %i \n",n_false_positives,numpart);
+
+            numpart++;
+        } ///end partition
+
+
+    }
+    fprintf(stderr,"Nb kmers stored in the bloom table %lld\n",nbkmers_solid);
+
+
+    ///////////////////////// last partition, will write all the FP's to the good file
+
+    end_debloom_partition(true);//One file only, fix that later
+
+
+    /////////end write files
+
+
+    fprintf(stderr,"Total nb false positives stored in the Debloom hashtable %lli \n",n_false_positives);
+
+    delete hasht1;
+
+
+    STOPWALL(deb,"Debloom");
+
+    // GUS: will use to output summary later
+    b1_size = (uint64_t) bl1tai;
+
+    fclose(debloom_file);
+    fclose(debloom_file_2);
+    solid_kmer_colour->close();
+
+
+    return 1;
+
 }

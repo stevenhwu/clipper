@@ -37,4 +37,8 @@ Set *load_false_positives_cascading4();
 void print_size_summary(FPSet *fp);
 void print_size_summary(FPSetCascading4 *fp);  
 
+uint64_t get_FPSetCascading4_size (FPSetCascading4 *fp);
+
+int debloom_partition(char *solid_kmer_partition_file, int max_memory);
+
 #endif

@@ -45,8 +45,8 @@ protected:
 //#pragma pack(1)
 
 public:
-
-//    struct element_pair
+    static uint64_t static_hashcode(uint64_t kmer);
+//    struct element_pair_base
 //	{
 //		key_type key;
 //	};
@@ -60,7 +60,6 @@ public:
 
     virtual ~AbstractOAHash(){};
 
-//    element_pair * find_slot(key_type key);
 
 };
 
@@ -69,7 +68,7 @@ class OAHash : public AbstractOAHash{
 
 private:
 //#pragma pack(1)
-	struct element_pair// : AbstractOAHash::element_pair
+	struct element_pair// : AbstractOAHash::element_pair_base
 	{
 		key_type key;
 		uint32_t value;

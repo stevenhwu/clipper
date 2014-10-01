@@ -134,6 +134,7 @@ Bloom::Bloom(int tai_bloom)
     user_seed =0;
     nb_elem = 0;
     tai = (1LL << tai_bloom);
+//    printf("In bloom constructor:%d %llu\n", tai_bloom, tai);
     nchar = tai/8LL;
     blooma =(unsigned char *)  malloc( nchar *sizeof(unsigned char)); // 1 bit per elem
     memset(blooma,0,nchar *sizeof(unsigned char));
@@ -154,7 +155,8 @@ Bloom::Bloom(int tai_bloom)
      nchar = (1+tai/8LL);
      blooma =(unsigned char *)  malloc( nchar *sizeof(unsigned char)); // 1 bit per elem
      memset(blooma,0,nchar *sizeof(unsigned char));
-     //fprintf(stderr,"malloc bloom %lli MB \n",(tai/8LL)/1024LL/1024LL);
+//     fprintf(stderr,"malloc bloom %lli MB \n",(tai/8LL)/1024LL/1024LL);
+//     printf("In bloom constructor:%d %llu %llu\n", tai_bloom, tai,  nchar *sizeof(unsigned char) );
      this->generate_hash_seed();
  }
 
@@ -170,6 +172,7 @@ BloomCpt::BloomCpt(int tai_bloom)
     user_seed = 0;
     nb_elem = 0;
     tai = (1LL << tai_bloom);
+//    printf("In bloom constructor:%d %llu\n", tai_bloom, tai);
     blooma =(unsigned char *)  malloc( (tai/2) *sizeof(unsigned char)); //4bits per elem
     memset(blooma,0,(tai/2) *sizeof(unsigned char));
     
@@ -245,7 +248,7 @@ void Bloom::dump(char * filename)
  file_data = fopen(filename,"wb");
  fwrite(blooma, sizeof(unsigned char), nchar, file_data); //1+
  printf("bloom dumped \n");
-
+ fclose(file_data);
 }
 
 

@@ -30,10 +30,15 @@ using namespace std;
 
 // abstract class
 class Set{
-    public:
+protected:
+	uint64_t total_memory=0;
+public:
     virtual void insert(set_elem elem) = 0;
     virtual void finalize() = 0;
     virtual bool contains(set_elem elemn) = 0;
+    virtual uint64_t get_total_memory(){};
+    virtual void set_total_memory(uint64_t memory){};
+    virtual ~Set(){};
 };
 
 class HashSet : public Set{
@@ -89,7 +94,7 @@ class AssocSet : public ListSet {
     void start_iterator();
     bool next_iterator();
 
-    
+    uint64_t get_total_memory();
     vector<set_elem>::iterator iterator;
 
 
@@ -139,20 +144,14 @@ class FPSetCascading4 : public Set{
  public:
   Bloom *bloom2, *bloom3, *bloom4;
   ListSet *false_positives;
-  bool contains(set_elem elemn) 
-  { 
-    if (bloom2->contains(elemn))
-    {
-      if (!bloom3->contains(elemn)) 
-	return true;
-      else if (bloom4->contains(elemn) && !false_positives->contains(elemn)) 
-	return true;
-    }
-    return false;
-  };
+
   void insert(set_elem elem) {fprintf (stderr, "Error can't insert in FPSetCascading!\n"); exit(0); };
   void finalize() {fprintf (stderr, "Error can't finalize in FPSetCascading!\n"); exit(0);};
-  bool is_false_positive(set_elem elemn) {return contains(elemn);};
+
+  bool contains(set_elem elemn);
+  bool is_false_positive(set_elem elemn);
+  uint64_t get_total_memory();
+  void set_total_memory(uint64_t memory);
 };
 
 #endif

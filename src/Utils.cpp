@@ -21,16 +21,29 @@ const char *assoc_kmer_file = (char *)"paired_kmer";
 const char *solid_kmers_colour_file = (char *)"solid_kmers_colour_binary";
 const char *assembly_colour_file = (char *)"contigs_colour.fa";
 
-const int table_print_frequency = 1000000; //default 10000
+const int print_table_frequency = 1000000; //default 10000
 
 
 // prefix-based output files naming 
-char prefix[1024];
+namespace Utils{
+//	int MaxFileNameLength = 1024;
+	char outfile_prefix[MaxFileNameLength];
+
+	void initilise_partition_names(char filenames[][MaxFileNameLength], int nb_splits){
+		for (int p = 0; p < nb_splits; ++p) {
+			sprintf(filenames[p] ,"%s_partition_%d", solid_kmers_colour_file, p);
+//			strcat(solid_kmer_partition_file[p],solid_kmers_colour_file);
+//			strcat(solid_kmer_partition_file[p],"_partition_");
+//			strcat(solid_kmer_partition_file[p],to_string(p).c_str());
+		}
+	}
+}
+
 char fileName[1024];
 char *return_file_name(const char *suffix)
 {
-    if (strlen(prefix)>0)
-        sprintf(fileName,"%s.%s",prefix,suffix);
+    if (strlen(Utils::outfile_prefix)>0)
+        sprintf(fileName,"%s.%s",Utils::outfile_prefix,suffix);
     else
         sprintf(fileName,"%s",suffix);
 
@@ -96,7 +109,7 @@ void bloom_pass_reads_binary(T *bloom_to_insert, BloomCpt *bloom_counter, char *
       NbInsertedKmers++;
       NbRead++;
 
-      if ((NbRead%table_print_frequency)==0) fprintf (stderr,stderr_message,13,(long long)NbRead);
+      if ((NbRead%print_table_frequency)==0) fprintf (stderr,stderr_message,13,(long long)NbRead);
 
     }
   fprintf (stderr,"\nInserted %lld %s kmers in the bloom structure.\n",(long long)NbInsertedKmers,"solid");
@@ -127,7 +140,7 @@ printf("binary pass read to bloom partition:%s\n",solid_kmer_partition_file);
       NbInsertedKmers++;
       NbRead++;
 
-      if ((NbRead% table_print_frequency )==0) fprintf (stderr,stderr_message,13,(long long)NbRead);
+      if ((NbRead% print_table_frequency )==0) fprintf (stderr,stderr_message,13,(long long)NbRead);
 
     }
   fprintf (stderr,"\nInserted %lld %s kmers in the bloom structure.\n",(long long)NbInsertedKmers,"solid");
@@ -137,7 +150,7 @@ printf("binary pass read to bloom partition:%s\n",solid_kmer_partition_file);
 int estimated_BL1;
 uint64_t estimated_BL1_freesize;
 
-float NBITS_PER_KMER = 11 ; // number of bits per kmer that optimizes bloo1 size
+float NBITS_PER_KMER;//11 ; // number of bits per kmer that optimizes bloo1 size
 
 
 

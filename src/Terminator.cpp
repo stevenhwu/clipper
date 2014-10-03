@@ -266,36 +266,39 @@ BranchingTerminator::BranchingTerminator(BinaryBank *given_SolidKmers,
 	kmer_type kmer;
     // estimate, from the first million of kmers, the number of branching kmers, extrapolating given the estimated genome size
     // TODO: erwan noticed that this code isn't useful anymore with AssocSet, feel free to remove it sometimes
-//    uint64_t nb_extrapolation = 3000000;
-//    SolidKmers->rewind_all();
-//    uint64_t nb_kmers = 0;
-//    nb_branching_kmers = 0;
+    uint64_t nb_extrapolation = 3000000;
+    SolidKmers->rewind_all();
+    uint64_t nb_kmers = 0;
+    nb_branching_kmers = 0;
 
-//    uint64_t previous_estimated_nb_branching_kmers, estimated_nb_branching_kmers;
-//    while (SolidKmers->read_element(&kmer))
-//    {
-////    	printf("ReadKmer: %li\n", kmer);
-//        if (is_branching(kmer))
-//            nb_branching_kmers++;
-//
-//        if ((nb_branching_kmers % table_print_frequency) == 0 && nb_branching_kmers>0)
-//        {
-//            previous_estimated_nb_branching_kmers = estimated_nb_branching_kmers;
-//            estimated_nb_branching_kmers = (uint64_t)((1.0*nb_branching_kmers)/nb_kmers * genome_size);
-//            // minor todo: stop when previous_.. - estimated < threshold (pourquoi pas = 10% estimated)
-//            fprintf (stderr,"%cExtrapolating the number of branching kmers from the first %dM kmers: %lld",13,(int)ceilf(nb_extrapolation/1024.0/1024.0),estimated_nb_branching_kmers);
-//        }
-//
-//        if (nb_kmers++ == nb_extrapolation)
-//            break;
-//    }
-//    printf("solidKmer:%lu\n",nb_kmers);
-//    estimated_nb_branching_kmers = (uint64_t)((1.0*nb_branching_kmers)/nb_kmers * genome_size); // final estimation
-//    int estimated_NBITS_TERMINATOR = max( (int)ceilf(log2f(estimated_nb_branching_kmers)), 1);
-//    fprintf (stderr,"\n");
+    uint64_t previous_estimated_nb_branching_kmers, estimated_nb_branching_kmers;
+    uint64_t nbElements = SolidKmers->nb_elements();
 
-    // call Hash16 constructor
-    // branching_kmers = new Hash16(estimated_NBITS_TERMINATOR);
+	while (SolidKmers->read_element(&kmer))
+    {
+//    	printf("ReadKmer: %li\n", kmer);
+        if (is_branching(kmer))
+            nb_branching_kmers++;
+
+        if ((nb_kmers % print_table_frequency) == 0 && nb_branching_kmers>0)
+        {
+            previous_estimated_nb_branching_kmers = estimated_nb_branching_kmers;
+            estimated_nb_branching_kmers = (uint64_t)((1.0*nb_branching_kmers)/nb_kmers * nbElements);
+            // minor todo: stop when previous_.. - estimated < threshold (pourquoi pas = 10% estimated)
+            fprintf (stderr,"%cExtrapolating the number of branching kmers from the first %dM kmers: %lld",13,(int)ceilf(nb_extrapolation/1024.0/1024.0),estimated_nb_branching_kmers);
+        }
+
+        if (nb_kmers++ == nb_extrapolation)
+            break;
+    }
+    printf("solidKmer:%lu\n",nb_kmers);
+    estimated_nb_branching_kmers = (uint64_t)((1.0*nb_branching_kmers)/nb_kmers * genome_size); // final estimation
+    int estimated_NBITS_TERMINATOR = max( (int)ceilf(log2f(estimated_nb_branching_kmers)), 1);
+    printf("%lld %llu, %d\nEnd estimator\n", nb_branching_kmers, estimated_nb_branching_kmers, estimated_NBITS_TERMINATOR);
+    fprintf (stderr,"\n");
+
+//     call Hash16 constructor
+//     branching_kmers = new Hash16(estimated_NBITS_TERMINATOR);
 
 
     branching_kmers = new AssocSet();
@@ -315,16 +318,18 @@ BranchingTerminator::BranchingTerminator(BinaryBank *given_SolidKmers,
         }
 
         nb_solid_kmers++;
-		if ((nb_branching_kmers % table_print_frequency) == 0 && nb_branching_kmers > 0)
+		if ((nb_solid_kmers % print_table_frequency) == 0 && nb_branching_kmers > 0)
 			fprintf(stderr, "%cIndexing branching kmers %lld ", 13,
-					nb_branching_kmers);
-//					estimated_nb_branching_kmers);
+//					nb_branching_kmers);
+					estimated_nb_branching_kmers);
     }
-    off_t nbElements = SolidKmers->nb_elements();
+//    int nbElements = SolidKmers->nb_elements();
 
+    fprintf(stderr, "%cIndexing branching kmers %lld ", 13,
+    //					nb_branching_kmers);
+    					estimated_nb_branching_kmers);
 
-
-    printf("solidKmer take2:%lu\t%zd\t%d\n",nb_solid_kmers, nbElements, SolidKmers->get_sizeElement());
+    printf("solidKmer in BranchingTerminator:%lu\t%zd\t%d\n",nb_solid_kmers, nbElements, SolidKmers->get_sizeElement());
     if (nb_branching_kmers == 0)
         printf("\n**** Warning\n\nNo branching kmers were found in this dataset (it is either empty or a tiny circular genome) - Minia will not assemble anything.\n\n****\n\n");
 
@@ -439,9 +444,10 @@ BranchingTerminatorColour::BranchingTerminatorColour(
 		BinaryBank *given_SolidKmers, uint64_t genome_size, Bloom *given_bloom,
 		Set *given_debloom) :
 		BranchingTerminator(given_SolidKmers, given_bloom, given_debloom) {
-//		Terminator(given_SolidKmers, given_bloom, given_debloom) {
+
 	kmer_type kmer;
-//	delete branching_kmers;
+
+	estimator(genome_size);
     branching_kmers = new AssocSet();
 
     // index, once and for all, all the branching solid kmers
@@ -462,34 +468,30 @@ BranchingTerminatorColour::BranchingTerminatorColour(
         }
 
         nb_solid_kmers++;
-		if ((nb_branching_kmers % table_print_frequency) == 0 && nb_branching_kmers > 0)
-			fprintf(stderr, "%cIndexing branching kmers %lld ", 13,
-					nb_branching_kmers);
+		if ((nb_branching_kmers % print_table_frequency) == 0 && nb_branching_kmers > 0)
+			fprintf(stderr, "%cIndexing branching kmers %lld ", 13, nb_branching_kmers);
 //					estimated_nb_branching_kmers);
     }
     off_t nbElements = SolidKmers->nb_elements();
 
 
 
-    printf("solidKmer take3:%lu\t%zd\t%d\n",nb_solid_kmers, nbElements, SolidKmers->get_sizeElement());
+    printf("solidKmer in BranchingTerminator Colour!:%lu\t%zd\t%d\n",nb_solid_kmers, nbElements, SolidKmers->get_sizeElement());
     if (nb_branching_kmers == 0)
         printf("\n**** Warning\n\nNo branching kmers were found in this dataset (it is either empty or a tiny circular genome) - Minia will not assemble anything.\n\n****\n\n");
 
 	branching_kmers->finalize();
 	branching_kmers->print_total_size();
 	total_memory = branching_kmers->get_total_memory();
-	fprintf(stderr,
-			"\n\nAllocated memory for marking: %lld branching kmers x (%d+%d )B \n",
+	fprintf(stderr, "\n\nAllocated memory for marking: %lld branching kmers x (%d+%d )B \n",
 			nb_branching_kmers, sizeof(kmer_type), sizeof(set_value_t));
-	fprintf(stderr,
-			" actual implementation:  (sizeof(kmer_type) = %d B) + (sizeof(set_value_t) = %d B) per entry:  %.2f bits / solid kmer\n",
+	fprintf(stderr, " actual implementation:  (sizeof(kmer_type) = %d B) + (sizeof(set_value_t) = %d B) per entry:  %.2f bits / solid kmer\n",
 			sizeof(kmer_type), sizeof(set_value_t),
-			(nb_branching_kmers
-					* ((sizeof(kmer_type) + sizeof(set_value_t)) * 8.0))
-					/ nb_solid_kmers);
+			(nb_branching_kmers * ((sizeof(kmer_type) + sizeof(set_value_t)) * 8.0)) / nb_solid_kmers);
 
     // init branching_kmers iterator for what happens next
      branching_kmers->start_iterator();
+
 }
 
 // constructor that simply loads a dump of branching kmers
@@ -517,5 +519,63 @@ BranchingTerminatorColour::BranchingTerminatorColour(BinaryBank *branchingKmers,
     // init branching_kmers iterator for what happens next
     total_memory = branching_kmers->get_total_memory();
     branching_kmers->start_iterator();
+
 }
-BranchingTerminatorColour::~BranchingTerminatorColour(){}
+
+uint64_t BranchingTerminatorColour::estimator(uint64_t genome_size ) {
+
+
+	uint64_t nbElements = SolidKmers->nb_elements();
+	uint64_t nb_extrapolation = 1000000;
+	if(nbElements/4 < nb_extrapolation){
+		nb_extrapolation = nbElements/4;
+	}
+
+	SolidKmers->rewind_all();
+	uint64_t nb_kmers = 0;
+	nb_branching_kmers = 0;
+
+	kmer_type kmer;
+	uint64_t previous_estimated_nb_branching_kmers = 0,
+			estimated_nb_branching_kmers = 0;
+
+	while (SolidKmers->read_kmer_skip_colour(&kmer)) {
+
+		if (is_branching(kmer))
+			nb_branching_kmers++;
+
+//		if ((nb_kmers % (nb_extrapolation/10) ) == 0 && nb_branching_kmers > 0) {
+//			estimated_nb_branching_kmers =
+//					(uint64_t) ((1.0 * nb_branching_kmers) / nb_kmers * nbElements);
+//			// minor todo: stop when previous_.. - estimated < threshold (pourquoi pas = 10% estimated)
+//			fprintf(stderr,
+//					"%cExtrapolating the number of branching kmers from the first %dM kmers: %lld %lld %lld",
+//					13, (int) ceilf(nb_extrapolation / 1024.0 / 1024.0),
+//					estimated_nb_branching_kmers, nb_branching_kmers, nb_kmers);
+//		}
+
+		if (nb_kmers++ == nb_extrapolation)
+			break;
+	}
+//	fprintf(stderr,
+//			"%cExtrapolating the number of branching kmers from the first %dM kmers: %lld",
+//			13, (int) ceilf(nb_extrapolation / 1024.0 / 1024.0),
+//			estimated_nb_branching_kmers);
+//	printf("solidKmer:%lu\n", nb_kmers);
+	estimated_nb_branching_kmers = (uint64_t) ((1.0 * nb_branching_kmers)
+			/ nb_kmers * nbElements); // final estimation
+	int estimated_NBITS_TERMINATOR = max(
+			(int) ceilf(log2f(estimated_nb_branching_kmers)), 1);
+	printf("TerminatorEstimate:%lld %llu, %d End estimator\n", nb_branching_kmers,
+			estimated_nb_branching_kmers, estimated_NBITS_TERMINATOR);
+	return estimated_nb_branching_kmers;
+//	    fprintf (stderr,"\n");
+
+
+
+}
+
+BranchingTerminatorColour::~BranchingTerminatorColour(){
+	printf("=====destory BranchingTerminatorColour=========\n");
+}
+

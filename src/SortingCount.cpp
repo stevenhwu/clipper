@@ -442,15 +442,15 @@ int first =1;
 #endif
              //   if ((NbRead%10000)==0)
 
-                if(tempread> table_print_frequency)
+                if(tempread> print_table_frequency)
                 {
-                    tempread -= table_print_frequency;
+                    tempread -= print_table_frequency;
 #if !SINGLE_BAR
                     else
                         if (nb_threads == 1)
                             progress.set(NbRead);
                         else
-                            progress.inc(table_print_frequency,tid);
+                            progress.inc(print_table_frequency,tid);
 #endif
                 }
             } //end while
@@ -555,7 +555,7 @@ first = 1;
                     hash.increment_colour(lkmer, lkmer_colour);
                     nkmers_read++;// Why not inside SINGLE_BAR??
 #if SINGLE_BAR
-                    if(verbose==0 && nkmers_read==table_print_frequency)
+                    if(verbose==0 && nkmers_read==print_table_frequency)
                     {
                         if (nb_threads == 1)
                             progress.inc(nkmers_read*sizeof(kmer_type));
@@ -711,7 +711,7 @@ first = 1;
     SolidKmers->close();
     solid_kmers_colour->close();
     printf("\nSaved %lld solid kmers\n",(long long)NbSolid);
-//    rmdir(temp_dir);//TODO add it back
+    rmdir(temp_dir);//TODO add it back
 
     STOPWALL(count,"Counted kmers");
     fprintf(stderr,"\n------------------ Counted kmers and kept those with abundance >=%i,     \n",nks);

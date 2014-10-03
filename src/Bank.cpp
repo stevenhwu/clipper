@@ -335,7 +335,7 @@ void Bank::init(char **fname, int nb_files_)
         buffered_file[i]->buffer = (unsigned char*) malloc(BUFFER_SIZE); 
         buffered_file[i]->fname = strdup(fname[i]);
         buffered_file[i]->file_colour = i;
-        printf("Name:%s Colour:%i\n", buffered_file[i]->fname, buffered_file[i]->file_colour);
+
     }
 
     rewind_all(); // initialize the get_next_seq iterator to the first file
@@ -712,17 +712,16 @@ size_t BinaryBank::read_kmer(void *element)
 
 size_t BinaryBank::read_kmer_colour(void *element_kmer, void* element_colour)
 {
-	fread(element_kmer, kSizeOfKmerType, 1, binary_read_file);
-    return fread(element_colour, kSizeOfKmerColour, 1, binary_read_file);
+	size_t size = fread(element_kmer, kSizeOfKmerType, 1, binary_read_file);
+	size += fread(element_colour, kSizeOfKmerColour, 1, binary_read_file);
+    return size;
 }
 
 size_t BinaryBank::read_kmer_skip_colour( void *element)
 {
-	size_t size = fread(element, kSizeOfKmerType, 1,
-			binary_read_file);
-	void* a;
-	fread(a , kSizeOfKmerColour, 1, binary_read_file);
-    return size;
+	size_t size = fread(element, kSizeOfKmerType, 1, binary_read_file);
+	fseek(binary_read_file, kSizeOfKmerColour, SEEK_CUR);
+	return size;
 }
 
 size_t BinaryBank::read_colour( void *element)
@@ -736,6 +735,7 @@ BinaryBank::~BinaryBank()
     {
         free (buffer); //buffer =NULL;
     }
+
 }
 
 

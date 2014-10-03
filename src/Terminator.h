@@ -14,7 +14,7 @@
 #include "Bank.h"
 #include "Utils.h"
 
-const int print_branching_frequence = table_print_frequency;
+//const int print_branching_frequence = print_table_frequency;
 
 class Terminator{
 
@@ -91,6 +91,8 @@ public:
 			BinaryBank *given_SolidKmers, Bloom *given_bloom,
 			Set *given_debloom);
 	~BranchingTerminator();
+
+
 };
 
 class BranchingTerminatorColour: public BranchingTerminator {
@@ -104,7 +106,9 @@ public:
 			Set *given_debloom);
 	~BranchingTerminatorColour();
 
-
+	uint64_t estimator(uint64_t genome_size);
+//	uint64_t estimator(BinaryBank *given_SolidKmers,
+//					Bloom *given_bloom, Set *given_debloom);
 
 };
 #endif

@@ -40,8 +40,15 @@ double wfin  ## TT =tim.tv_sec +(tim.tv_usec/1000000.0); \
 extern int nks;
 extern uint32_t max_couv;
 
-extern char prefix[1024];
 extern float NBITS_PER_KMER;
+
+namespace Utils{
+	const int MaxFileNameLength = 1024;
+	extern char outfile_prefix[MaxFileNameLength];
+
+	void initilise_partition_names(char solid_kmer_partition_file[][MaxFileNameLength], int nb_splits);
+
+}
 
 // constants
 extern const char *solid_kmers_file;// = (char *)"solid_kmers_binary"; 
@@ -81,7 +88,7 @@ template<typename T,typename U>void bloom_pass_reads(Bank *Sequences,T *bloom_to
 
 float needleman_wunch(string a, string b);
 
-extern const int table_print_frequency;
+extern const int print_table_frequency;
 
 class Progress
 {

@@ -105,6 +105,7 @@ inline signed int Bank::buffered_gets(buffered_file_t *bf, variable_string_t *s,
             s->max = s->length + (i - bf->buffer_start + 1);
             nearest_power_of_2(s->max);
             s->string = (char*)realloc(s->string,s->max);
+
         } 
         memcpy(s->string + s->length, bf->buffer + bf->buffer_start, i - bf->buffer_start);
         s->length += i - bf->buffer_start;
@@ -169,11 +170,7 @@ bool  Bank::get_next_seq_from_file(char **nseq, char **cheader, int *len, int *h
     if (c != '\n')
         buffered_gets(bf, dummy, NULL, true, true); // read header //dummy instead of header to stop before first space
     
-    if (read->string == NULL)
-    {
-        read->max = 256;
-        read->string = (char*) malloc(read->max);
-    }
+
     while ( (c = buffered_getc(bf)) != -1 && c != '>' && c != '+' && c != '@')
     {
         if (c == '\n')
@@ -243,12 +240,88 @@ bool Bank::get_next_seq(char **nseq, int *len)
 }
 
 
-bool Bank::get_next_seq_colour(char **nseq, int *len, KmerColour *col)
+bool Bank::get_next_seq_colour(char **nseq, int *len, KmerColour *colour)
 {
-	bool nextSeq = get_next_seq(nseq, NULL, len, NULL, col);
+	bool nextSeq = get_next_seq(nseq, NULL, len, NULL, colour);
 	return nextSeq;
 }
 
+bool Bank::get_next_seq_colour_in_seq_name(char **nseq, char **cheader, int *len, int *hlen, int file_id, KmerColour *kmer_colour)
+{//Non-generic customised reader
+
+	signed char c;
+	buffered_file_t *bf = buffered_file[file_id];
+
+	if (bf->last_char == 0)
+	{
+		while ( (c = buffered_getc(bf)) != -1 && c != '>' && c != '@'); // go to next header
+		if (c == -1)
+			return false; // eof
+		bf->last_char = c;
+	}
+//	printf("last_char:%c\n", bf->last_char);
+	if (bf->last_char == '>') {
+		int code = buffered_gets(bf, colour, NULL, false, false);
+
+		*kmer_colour = stoi(colour->string);
+//		printf("this should be colour:%s %d %d =%c=\n", colour->string, *kmer_colour, aoeu);
+		if(code==-1){
+			return false;
+		}
+	}
+	read->length = dummy->length = 0;
+
+//	if (buffered_gets(bf, header, (char *)&c, false, false) < 0) //ici
+//		return false; // eof
+//	if (c != '\n'){
+//		buffered_gets(bf, dummy, NULL, true, true); // read header //dummy instead of header to stop before first space
+//	}
+//	printf("AA header:%d dummy:%d\n", header->length, dummy->length);
+	while ( (c = buffered_getc(bf)) != -1 && c != '>' && c != '+' && c != '@')
+	{
+		if (c == '\n')
+			continue; // empty line
+		read->string[read->length++] = c;
+		buffered_gets(bf, read, NULL, true, true);
+//		printf("in read;%s\n",read->string);
+	}
+
+	if (c == '>' || c == '@')
+		bf->last_char = c;
+	if (read->length + 1 >= read->max)
+	{
+		read->max = read->length + 2;
+		nearest_power_of_2(read->max);
+		read->string = (char*) realloc(read->string, read->max);
+	}
+	read->string[read->length] = '\0';
+//	    if (c == '+') // fastq
+//	    {
+//	        if (dummy->max < read->max) // resize quality to match read length
+//	        {
+//	            dummy->max = read->max;
+//	            dummy->string = (char*)realloc(dummy->string, dummy->max);
+//	        }
+//	        while ( (c = buffered_getc(bf)) != -1 && c != '\n'); // read rest of quality comment
+//	        while (buffered_gets(bf, dummy, NULL, true, true) >= 0 && dummy->length < read->length); // read rest of quality
+//	        bf->last_char = 0;
+//	    }
+
+	*len = read->length;
+	*nseq = read->string;
+	if (cheader && hlen)
+	{
+		*cheader = header->string;
+		*hlen = header->length;
+	}
+	return true;
+
+}
+
+bool Bank::get_next_seq_colour_in_seq_name(char **nseq, int *len, KmerColour *col){
+	bool nextSeq = get_next_seq_colour_in_seq_name(nseq, NULL, len, NULL, 0, col); //Assuming only 1 file
+	return nextSeq;
+}
 
 // had to move the Bank(x,x) constructor to an init() to avoid calling a constructor inside the Bank(x) constructor
 void Bank::init(char **fname, int nb_files_)
@@ -344,6 +417,13 @@ void Bank::init(char **fname, int nb_files_)
     read = (variable_string_t*) calloc(1,sizeof(variable_string_t));
     dummy = (variable_string_t*) calloc(1,sizeof(variable_string_t));
     header = (variable_string_t*) calloc(1,sizeof(variable_string_t));
+    colour = (variable_string_t*) calloc(1,sizeof(variable_string_t));
+
+    //Moved malloc read-> string.
+	read->max = 256;
+	read->string = (char*) malloc(read->max);
+	colour-> max = 8; //longer than this?? really?
+	colour->string = (char*) malloc(colour->max);
 
     for(int jj=0; jj<MAX_NB_FILES; jj++ )
       free	(nfname [jj]); 
@@ -363,7 +443,7 @@ Bank::Bank(char **fname, int nb_files_)
 }
 
 Bank::~Bank(){
-    variable_string_t * to_free[3] = {read, dummy, header};
+    variable_string_t * to_free[4] = {read, dummy, header, colour};
     for (int i = 0; i < 3; i++)
     {
         if (to_free[i])

@@ -294,7 +294,7 @@ inline void assemble_partition(char *solid_kmer_partition_file)
 
     //////-------------------------------------------------------------------------------------------
     fprintf (stderr,"______________________________________________________ \n");
-    fprintf (stderr,"___________ Assemble partition from bloom filter _______________ \n");
+    fprintf (stderr,"_______ Assemble partition from bloom filter _________ \n");
     fprintf (stderr,"______________________________________________________ \n\n");
 
     //////-------------------------------------------------------------------------------------------
@@ -322,8 +322,13 @@ inline void assemble_partition(char *solid_kmer_partition_file)
     long long mlenleft=0,mlenright=0;
     int64_t NbBranchingKmer=0;
     char kmer_seq[sizeKmer+1];
-    FILE * file_assembly = fopen(return_file_name(assembly_file),"w+");
-    FILE * file_colour_assembly = fopen(return_file_name(assembly_colour_file),"w+");
+
+    char temp_filename[2014];
+    sprintf(temp_filename, "%s.%s", solid_kmer_partition_file, assembly_file);
+    FILE * file_assembly = fopen(return_file_name(temp_filename),"w+");
+    sprintf(temp_filename, "%s.%s", solid_kmer_partition_file, assembly_colour_file);
+    FILE * file_colour_assembly = fopen(return_file_name(temp_filename),"w+");
+
 //    BinaryBank *SolidKmers = new BinaryBank(return_file_name(solid_kmers_file),sizeof(kmer_type),0);
     BinaryBank *solid_kmers_colour = new BinaryBank(return_file_name(solid_kmer_partition_file), kSizeOfKmerType+kSizeOfKmerColour, 0);
 
@@ -351,7 +356,7 @@ inline void assemble_partition(char *solid_kmer_partition_file)
 
 
     BranchingTerminator *terminator;
-printf("Done FP\n");
+
     if (LOAD_BRANCHING_KMERS)
     {printf("LOA:%d\n",LOAD_BRANCHING_KMERS);
 		BinaryBank *BranchingKmers = new BinaryBank(
@@ -362,9 +367,7 @@ printf("Done FP\n");
 		BranchingKmers->close();
     }
     else{
-//    	terminator = new BranchingTerminatorColour(SolidKmers,
-//    				genome_size, bloo1, false_positives);
-printf("++++++++++++++++++++++++++++++++++++++++++++++++++\n");
+
 		terminator = new BranchingTerminatorColour(solid_kmers_colour,
 				genome_size, bloom, false_positives);
     }
@@ -375,7 +378,7 @@ printf("++++++++++++++++++++++++++++++++++++++++++++++++++\n");
         terminator->dump_branching_kmers(BranchingKmers);
         BranchingKmers->close();
     }
-printf("done terminator\n");
+
 #ifdef UNITIG
     SimplePathsTraversal *traversal = new SimplePathsTraversal(bloo1,false_positives,terminator);
     fprintf (stderr,"_________________Assembling in Unitig mode ..._____________________ \n\n");
@@ -416,7 +419,7 @@ printf("done terminator\n");
 
 
 //
-    printf("Start while\n");
+//    printf("Start while\n");
     while (terminator->next(&kmer))
     {
 
@@ -586,12 +589,12 @@ printf("done terminator\n");
     delete traversal;
 //	printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
     printf("===========DONE=========EXIT========\n");
-exit(-9);
+//exit(-9);
 }
 
 void divided_solid_kmer_colour_into_partitions(int nb_partitions, char solid_kmer_partition_file[][1024]){
 
-    printf("Split into loop\n");
+    printf("Split into loop:%d\n", nb_partitions);
 //    int nb_partitions = 3;
 
 //	char redundant_colour_filename[nb_partitions][256];
@@ -600,7 +603,7 @@ void divided_solid_kmer_colour_into_partitions(int nb_partitions, char solid_kme
 	for (int p=0;p<nb_partitions;p++)
 	{
 //		sprintf(solid_kmer_partition_file[p] ,"%s_partition_%d", solid_kmers_colour_file, p);
-		printf("%s:%s\n", solid_kmer_partition_file[p], solid_kmers_colour_file);
+		printf("Divide %s into %s\n", solid_kmers_colour_file, solid_kmer_partition_file[p]);
 		solid_kmers_colour_partition[p] = new BinaryBank(
 				return_file_name(solid_kmer_partition_file[p]),
 				kSizeOfKmerType + kSizeOfKmerColour, 1);
@@ -619,20 +622,22 @@ void divided_solid_kmer_colour_into_partitions(int nb_partitions, char solid_kme
 
     	while( solid_kmers_colour-> read_kmer_colour(&kmer, &kmer_colour)){
     		kmer_type kmer_hash  = AbstractOAHash::static_hashcode(kmer);
-//    		int index = kmer_hash % nb_partitions;
+    		int index = kmer_hash % nb_partitions;
+    		distinct_kmers_per_partition[index]++;
+			solid_kmers_colour_partition[index]-> write(&kmer, kSizeOfKmerType);
+			solid_kmers_colour_partition[index]-> write(&kmer_colour, kSizeOfKmerColour);
 
-    		int temp = kmer_hash % 10;
-    		for (int i = 0; i < nb_partitions; ++i) {
-//    			printf("%d\t%d\n", temp, i);
-    			if(i != temp){
-    				int index = i;
-    				distinct_kmers_per_partition[index]++;
-    				solid_kmers_colour_partition[index]-> write(&kmer, kSizeOfKmerType);
-    				solid_kmers_colour_partition[index]-> write(&kmer_colour, kSizeOfKmerColour);
-    				total_sub++;
-    			}
-			}
-//    		index = total <1675000? 0:1;
+//			Testing mulit subparts method -- FAIL
+//    		int temp = kmer_hash % 10;
+//    		for (int i = 0; i < nb_partitions; ++i) {
+//    			if(i != temp){
+//    				int index = i;
+//    				distinct_kmers_per_partition[index]++;
+//    				solid_kmers_colour_partition[index]-> write(&kmer, kSizeOfKmerType);
+//    				solid_kmers_colour_partition[index]-> write(&kmer_colour, kSizeOfKmerColour);
+//    				total_sub++;
+//    			}
+//			}
     		total ++;
 
     	}
@@ -648,21 +653,24 @@ void divided_solid_kmer_colour_into_partitions(int nb_partitions, char solid_kme
 		delete solid_kmers_colour_partition[p];
 
 	}
-	printf("Total:%d\t%d\t%d\t%d\n",total, total2, total_sub, total/10*9*2);
+	printf("Total:%d\t%d\t%d\t%d\n",total, total2, total_sub, total/10*9*nb_partitions);
 }
 
 void test_partitions(int nb_partitions, char solid_kmer_partition_file[][1024]){
+
+	for (int p=0;p<nb_partitions;p++) {
+		assemble_partition(solid_kmer_partition_file[p]);
+	}
+}
+
+
+void test_memory_partitions(int nb_partitions, char solid_kmer_partition_file[][1024]){
 	long long maxlen=10000000;
 	BinaryBank *solid_kmers_colour_partition[nb_partitions];
 
 	uint64_t memory[nb_partitions];
 	for (int p=0;p<nb_partitions;p++) {
 		memory[p] = MemoryUtils::estimate_memory(solid_kmer_partition_file[p], max_memory);//, bloo1, false_positives);
-//		printf("\n\n=================================\n\n");
-//		solid_kmers_colour_partition[p] = new BinaryBank(
-//								return_file_name(solid_kmer_partition_file[p]),
-//								kSizeOfKmerType + kSizeOfKmerColour, 0);
-		assemble_partition(solid_kmer_partition_file[p]);
 	}
 	printf("Summary memory usage for all partitions:\n");
 	for (int p=0;p<nb_partitions;p++) {
@@ -670,9 +678,7 @@ void test_partitions(int nb_partitions, char solid_kmer_partition_file[][1024]){
 		printf("P%d: %llu %.2f\n", p, memory[p], memory[p]/(8.0)/(1024.0) );
 	}
 
-//	exit(-1);
 }
-
 
 int main(int argc, char *argv[])
 {
@@ -807,29 +813,32 @@ int main(int argc, char *argv[])
 //
 //    char* b = const_cast<char*> (solid_kmers_colour_file);
 //    assemble_partition(b);
-	int nb_splits=3;
+	int nb_splits=10;
 	char solid_kmer_partition_file[nb_splits][1024];
 	Utils::initilise_partition_names(solid_kmer_partition_file, nb_splits);
 
 	Bank *ReadsTest = new Bank(argv[1]);
-	printf("OUTcouncting:%d\n", nb_splits);
-
 	SortingCountPartitions::sorting_count_partitions(ReadsTest, solid_kmer_partition_file, max_memory, max_disk_space, nb_splits);
-
 	delete ReadsTest;
-exit(-1);
-	divided_solid_kmer_colour_into_partitions(nb_splits, solid_kmer_partition_file);
+
+
+	test_memory_partitions(nb_splits, solid_kmer_partition_file);
+
+//	test_memory_partitions_using_number_only(nb_splits, solid_kmer_partition_file);
 	test_partitions(nb_splits, solid_kmer_partition_file);
-//
-//
-//
-//exit(-1);
 
-
+exit(-1);
+	bool divide_kmers = false;
+		if(divide_kmers){
+			divided_solid_kmer_colour_into_partitions(nb_splits, solid_kmer_partition_file);
+	}
+//
+//
+exit(-1);
 
 
     START_FROM_SOLID_KMERS = 1; //TODO change back to 0 later
-    LOAD_FALSE_POSITIVE_KMERS = 1; //TODO: change back to 0 later
+    LOAD_FALSE_POSITIVE_KMERS =1; //TODO: change back to 0 later
     NO_FALSE_POSITIVES_AT_ALL = 0;//TODO: change back to 0 later
     STARTWALL(0);
 printf("argv[1]:%s\n", argv[1]);
@@ -879,24 +888,25 @@ printf("==========START_FROM_SOLID_KMERS\n");
 		// titus mode: no FP's
 		false_positives = dummy_false_positives();
 	}
-exit(-1);
+	assemble();
+//exit(-1);
     //  return 1;
 //int count = 0;
 //while(getCurrentRSS() < 100000000){
 //	printf("A:Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
-//	assemble();
+
 //    BinaryBank solid_kmers_colour (return_file_name(solid_kmers_colour_file), kSizeOfKmerType+kSizeOfKmerColour, 0);
 //    BranchingTerminator *terminator = new BranchingTerminatorColour(&solid_kmers_colour,
 //    				genome_size, bloo1, false_positives);
 //
 ////    MemoryUtils::estimate_memory_number_only(solid_kmers_colour_file, max_memory);
 //	MemoryUtils::estimate_memory(&solid_kmers_colour, bloo1, false_positives, terminator);
-exit(-1);
+//exit(-1);
 //	int nb_partitions=3;
 //	char solid_kmer_partition_file[nb_partitions][1024];
 //	divided_solid_kmer_colour_into_partitions(nb_partitions, solid_kmer_partition_file);
 //	test_partitions(nb_partitions, solid_kmer_partition_file);
-exit(-1);
+//exit(-1);
 //	for (int p = 0; p < nb_partitions; ++p) {
 //		assemble_partition(solid_kmer_partition_file[p]);
 //	}

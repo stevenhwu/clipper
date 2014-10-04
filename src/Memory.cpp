@@ -272,7 +272,7 @@ uint64_t MemoryUtils::estimate_memory(BinaryBank* solid_kmers_colour,
 		printf("Estimate FP %llu\n", fp_total);
 		printf("Actual   FP %llu\n", false_positives->get_total_memory());
 
-		printf("Estimate terminator??? %llu %llu (how many inster??\n", nbElements*fpRate * 10, nbElements*fpRate * 10);
+		printf("Estimate terminator??? %llu %llu %llu (how many inster??\n", (uint64_t) ceilf(nbElements*fpRate), (uint64_t) ceilf(nbElements*fpRate*4), (uint64_t) ceilf(nbElements*fpRate * 10) );
 		printf("Actual   terminator %llu\n", terminator->get_total_memory());
 
 

@@ -67,7 +67,7 @@ class Bank{
         void close_stream(int i);
         void rewind_all();
 
-        variable_string_t *read, *dummy, *header;
+        variable_string_t *read, *dummy, *header, *colour;
 
         int nb_files; // total nb of files
         int index_file; // index of current file
@@ -88,6 +88,9 @@ class Bank{
         z_off_t restore_pos;
 
         buffered_file_t  **buffered_file;
+
+        bool get_next_seq_colour_in_seq_name(char **nseq, char **cheader, int *len, int *hlen, int file_id, KmerColour *colour);
+        bool get_next_seq_colour_in_seq_name(char **nseq, int *len, KmerColour *col);
 };
 
 class BinaryBank

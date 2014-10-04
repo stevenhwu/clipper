@@ -2,9 +2,9 @@
 #include "Bank.h"
 
 // some globals that don't really belong anywhere
-int nks; // min abundance
+uint32_t nks; // min abundance
 uint32_t max_couv = 2147483646; // note: uint_abundance_t is 32 bits in SortingCount.cpp
- struct timeval tim;
+struct timeval tim;
 
 const char *solid_kmers_file = (char *)"solid_kmers_binary"; 
 const char *false_positive_kmers_file = (char *)"false_positive_kmers";
@@ -651,7 +651,7 @@ void Progress::finish()
         fprintf(stderr,"\n");
     else
         fprintf(stderr,"]\n");
-    
+
     fflush(stderr);
     todo= 0;
     done = 0;
@@ -695,7 +695,6 @@ void Progress::inc(uint64_t ntasks_done, int tid)
             rem -= min_r*60;
             
             fprintf(stderr,"%c%-5.3g  %%     elapsed: %6i min %-4.0f  sec      estimated remaining: %6i min %-4.0f  sec ",13,100*(double)total_done/todo,min_e,elapsed,min_r,rem);
-
         }
         else
         {
@@ -712,7 +711,7 @@ void Progress::inc(uint64_t ntasks_done)
     done += ntasks_done;
     partial += ntasks_done;
 
-    
+    printf("todo:%d done:%d ntask%lu\n", todo, done, ntasks_done);
     while(partial >= steps)
     {
         if(timer_mode)
@@ -728,7 +727,7 @@ void Progress::inc(uint64_t ntasks_done)
             int min_r  = (int)(rem / 60) ;
             rem -= min_r*60;
             
-//            fprintf(stderr,"%c%-5.3g  %%     elapsed: %6i min %-4.0f  sec      estimated remaining: %6i min %-4.0f  sec ",13,100*(double)done/todo,min_e,elapsed,min_r,rem);
+            fprintf(stderr,"%c%-5.3g  %%     elapsed: %6i min %-4.0f  sec      estimated remaining: %6i min %-4.0f  sec ",13,100*(double)done/todo,min_e,elapsed,min_r,rem);
         }
         else
         {

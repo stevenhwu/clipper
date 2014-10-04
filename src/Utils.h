@@ -37,7 +37,7 @@ double wfin  ## TT =tim.tv_sec +(tim.tv_usec/1000000.0); \
  fprintf(stderr,"-------------------%s time Wallclock  %g s\n",MESSAGE,  wfin ## TT-wdebut ## TT  );
 
 // global variables
-extern int nks;
+extern uint32_t nks;
 extern uint32_t max_couv;
 
 extern float NBITS_PER_KMER;

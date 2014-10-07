@@ -346,7 +346,7 @@ void Bank::init(char **fname, int nb_files_)
     nfname = (char**) malloc(sizeof(char*)*MAX_NB_FILES);
     for(int jj=0; jj<MAX_NB_FILES; jj++ )
 	nfname [jj] =  (char*) malloc(sizeof(char)*TAILLE_NOM);
-      
+
     if(deb=='>' || deb=='@' || deb==EOF)
     { // file is a fasta/q file
         gzclose(tempfile);
@@ -391,9 +391,9 @@ void Bank::init(char **fname, int nb_files_)
 
         if (strstr(fname[i],"gz") == (fname[i]+strlen(fname[i])-2) ) compressed=true;
         if (compressed)
-            // crude hack, based on Quip paper reporting compression ratio (~0.3). 
+            // crude hack, based on Quip paper reporting compression ratio (~0.3).
             // gzseek(SEEK_END) isn't supported. need to read whole file otherwise :/
-            estimated_filesize = fsize(fname[i]) * 4; 
+            estimated_filesize = fsize(fname[i]) * 4;
         else
             estimated_filesize = fsize(fname[i]);
 
@@ -405,12 +405,11 @@ void Bank::init(char **fname, int nb_files_)
     for (i=0; i<nb_files; i++)
     {
         buffered_file[i] = (buffered_file_t *)calloc(1, sizeof(buffered_file_t));
-        buffered_file[i]->buffer = (unsigned char*) malloc(BUFFER_SIZE); 
+        buffered_file[i]->buffer = (unsigned char*) malloc(BUFFER_SIZE);
         buffered_file[i]->fname = strdup(fname[i]);
         buffered_file[i]->file_colour = i;
 
     }
-
     rewind_all(); // initialize the get_next_seq iterator to the first file
 
     // init read and dummy (for readname and quality)
@@ -426,7 +425,7 @@ void Bank::init(char **fname, int nb_files_)
 	colour->string = (char*) malloc(colour->max);
 
     for(int jj=0; jj<MAX_NB_FILES; jj++ )
-      free	(nfname [jj]); 
+      free	(nfname [jj]);
     free(nfname);
 }
 
@@ -443,28 +442,43 @@ Bank::Bank(char **fname, int nb_files_)
 }
 
 Bank::~Bank(){
+
     variable_string_t * to_free[4] = {read, dummy, header, colour};
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 4; i++)
     {
         if (to_free[i])
-
         {
             if (to_free[i]->string)
                 free(to_free[i]->string);
             free(to_free[i]);
         }
     }
+    close();
     for (int i=0; i<nb_files; i++)
     {
+//    	printf("stirr %d %d\n", i, buffered_file[i]->stream);
+//		if(buffered_file[i] != NULL){
+//			int aoeu = gzclose(buffered_file[i]->stream);
+//			printf("%d\n",aoeu);
+//		}
+////		aoeu;
+
         free(buffered_file[i]->buffer);
+        free(buffered_file[i]->fname);
         free(buffered_file[i]);
     }
+    free(buffered_file);
 }
 
 void Bank::close()
 {
-    for (int i=0; i<nb_files; i++)
-        gzclose(buffered_file[i]->stream);
+    for (int i=0; i<nb_files; i++){
+    	if (buffered_file[i]->stream != NULL)
+		{
+    		gzclose(buffered_file[i]->stream);
+		}
+        buffered_file[i]->stream = NULL;
+    }
 }
 
 // estimate the volume of all redundant kmers in the reads, if they were to be stored in 2bits
@@ -573,16 +587,6 @@ void Bank::load_position()
 
 // BinaryBank: a binary file containing kmers
 
-BinaryBank::BinaryBank(char *given_filename, int given_sizeElement, bool write) : sizeElement(given_sizeElement)
-{
-    strcpy(filename,given_filename);
-    open(write);
-    buffer_size_nelem= (WRITE_BUFFER/given_sizeElement);
-    buffer = (void *) malloc(given_sizeElement * buffer_size_nelem);
-    cpt_buffer=0;
-}
-
-
 BinaryBankConcurrent::BinaryBankConcurrent(char *given_filename, int given_sizeElement, bool write, int given_nthreads) : BinaryBank(given_filename,given_sizeElement,write) 
 {
     nthreads = given_nthreads;
@@ -667,9 +671,33 @@ void BinaryBankConcurrent::close()
 }
 
 
+BinaryBankConcurrent::~BinaryBankConcurrent()
+{
+    for (int i= 0; i< nthreads; i++)
+    {
+        free(((void ** )bufferT)[i]);
+        ((void ** )bufferT)[i]=NULL;
+    }
+    free(bufferT);
+    free(cpt_buffer_tid);
+
+}
+
+
+
+BinaryBank::BinaryBank(char *given_filename, int given_sizeElement, bool write) : sizeElement(given_sizeElement)
+{
+    strcpy(filename,given_filename);
+    open(write);
+    buffer_size_nelem= (WRITE_BUFFER/given_sizeElement);
+    buffer = (void *) malloc(given_sizeElement * buffer_size_nelem);
+    cpt_buffer=0;
+}
+
+
 void BinaryBank::write_element( void *element)
 {
-  //  flockfile(binary_read_file);
+  //  flockfile(binary_read_file);ca
    // fprintf(stderr,"write elem %lli \n",*(int64_t *)element);
     if (!fwrite(element, sizeElement, 1, binary_read_file))
     {
@@ -817,19 +845,6 @@ BinaryBank::~BinaryBank()
     }
 
 }
-
-
-BinaryBankConcurrent::~BinaryBankConcurrent()
-{
-    
-    for (int i= 0; i< nthreads; i++)
-    {
-        free(((void ** )bufferT)[i]);
-        ((void ** )bufferT)[i]=NULL;
-    }
-    free(bufferT);
-}
-
 
 
 /////////////class BinaryReads a file containing reads

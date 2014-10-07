@@ -88,7 +88,7 @@ inline void assemble()
     char *assemble_only_one_region = NULL; // debugging, set to a ASCII kmer to activate, NULL to desactivate
     bool LOAD_BRANCHING_KMERS=false; // debugging
     bool DUMP_BRANCHING_KMERS=false;
-   
+
     BranchingTerminator *terminator;
 
     if (LOAD_BRANCHING_KMERS)
@@ -272,20 +272,28 @@ inline void assemble()
 
     fprintf (stderr,"\n Total nt assembled  %lli  nbContig %lli\n",totalnt,nbContig);
     fprintf (stderr,"\n Max contig len  %lli (debug: max len left %lli, max len right %lli)\n",max_contig_len,mlenleft,mlenright);
-    
-    STOPWALL(assembly,"Assembly");
 
+    STOPWALL(assembly,"Assembly");
+    MemoryMonitor::printValue("big here??");
     free(left_traversal);
     free(right_traversal);
+    free(left_colour_traversal);
+    free(right_colour_traversal);
     free(contig);
+    free(contig_colour);
+
+    fclose(file_assembly);
+    fclose(file_colour_assembly);
     SolidKmers->close();
     solid_kmers_colour->close();
-//    delete SolidKmers;
-//    delete solid_kmers_colour;
-//    delete terminator;
+    delete SolidKmers;
+    delete solid_kmers_colour;
+    delete terminator;
     delete traversal;
-//	printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
+
+    MemoryMonitor::printValue("why not decrease??");
     printf("===========DONE=========EXIT========\n");
+
 //exit(-9);
 }
 
@@ -298,13 +306,13 @@ inline void assemble_partition(char *solid_kmer_partition_file)
     fprintf (stderr,"______________________________________________________ \n\n");
 
     //////-------------------------------------------------------------------------------------------
-
+    MemoryMonitor::printValue("init assemble");
 
     long long len_left = 0;
     long long len_right = 0;
     long long contig_len =0;
     long long maxlen=10000000;
-
+//    maxlen=100000000;
     char *left_traversal  = (char *) malloc(maxlen*sizeof(char));
     char *right_traversal = (char *) malloc(maxlen*sizeof(char));
     KmerColour *left_colour_traversal  = (KmerColour *) malloc(maxlen*sizeof(KmerColour));
@@ -313,6 +321,14 @@ inline void assemble_partition(char *solid_kmer_partition_file)
     char *contig          = (char *) malloc(2*(maxlen+sizeKmer)*sizeof(char));
     KmerColour *contig_colour   = (KmerColour *) malloc(2*(maxlen+sizeKmer)*sizeof(KmerColour));
 
+//    char *left_traversal  = (char *) calloc(maxlen,sizeof(char));
+//	char *right_traversal = (char *) calloc(maxlen,sizeof(char));
+//	KmerColour *left_colour_traversal  = (KmerColour *) calloc(maxlen,sizeof(KmerColour));
+//	KmerColour *right_colour_traversal = (KmerColour *) calloc(maxlen,sizeof(KmerColour));
+//
+//	char *contig          = (char *) calloc(2*(maxlen+sizeKmer),sizeof(char));
+//	KmerColour *contig_colour   = (KmerColour *) calloc(2*(maxlen+sizeKmer), sizeof(KmerColour));
+    MemoryMonitor::printValue("after malloc"); //malloc take up to ~80,000kb
     kmer_type kmer;
     KmerColour kmer_colour;
 
@@ -331,23 +347,24 @@ inline void assemble_partition(char *solid_kmer_partition_file)
 
 //    BinaryBank *SolidKmers = new BinaryBank(return_file_name(solid_kmers_file),sizeof(kmer_type),0);
     BinaryBank *solid_kmers_colour = new BinaryBank(return_file_name(solid_kmer_partition_file), kSizeOfKmerType+kSizeOfKmerColour, 0);
-
-    char file_name[1024];
+    MemoryMonitor::printValue("after solidkmer");
+    char file_name[Utils::MaxFileNameLength];
 //    char* file_name = const_cast<char*>(solid_kmers_colour_file);
     strcpy(file_name, solid_kmers_colour_file);
     char colour_seq[1000];
 
     Bloom* bloom = bloom_create_bloo1_partition((BloomCpt *) NULL,
     		solid_kmer_partition_file, false);
+    MemoryMonitor::printValue("after bloom");
     	debloom_partition(solid_kmer_partition_file, max_memory);
-
+    	MemoryMonitor::printValue("after create debloom, sholud be the same as above");
     //	estimated_BL1_freesize =  (uint64_t)(solid_kmer_colour->nb_elements()*NBITS_PER_KMER);
     	//size estimating of bloom
 
     	Set* false_positives = load_false_positives_cascading4_partition(
     			solid_kmer_partition_file);
 
-
+    	MemoryMonitor::printValue("after FP");
     STARTWALL(assembly);
 
     char *assemble_only_one_region = NULL; // debugging, set to a ASCII kmer to activate, NULL to desactivate
@@ -378,7 +395,7 @@ inline void assemble_partition(char *solid_kmer_partition_file)
         terminator->dump_branching_kmers(BranchingKmers);
         BranchingKmers->close();
     }
-
+    MemoryMonitor::printValue("after terminator");
 #ifdef UNITIG
     SimplePathsTraversal *traversal = new SimplePathsTraversal(bloo1,false_positives,terminator);
     fprintf (stderr,"_________________Assembling in Unitig mode ..._____________________ \n\n");
@@ -389,37 +406,10 @@ inline void assemble_partition(char *solid_kmer_partition_file)
     traversal->set_maxlen(maxlen);
     traversal->set_max_depth(500);
     traversal->set_max_breadth(20);
+    MemoryMonitor::printValue("before loop, before solid_kmer_colour in hash");
     traversal->SetSolidKmersColour(solid_kmers_colour, max_memory);
+    MemoryMonitor::printValue("before loop");
 
-//    printf("\nMemory usage:\n");
-//	uint64_t min_solid = (1 * solid_kmers_colour->nb_elements()
-//			* OAHashColour::size_entry()	);
-//	printf("Bloom structure: %" PRId64" (Divided up bloom, recalculate FP&Terminator\n",  bloo1->tai);
-//	printf("Terminator: %" PRId64"\n", terminator-> get_total_memory());
-//    printf("false_positives: %" PRId64"\n", false_positives->get_total_memory() );
-//    printf("Soldi_kmer_colour: %" PRId64" to %" PRId64"\n", min_solid, min_solid*2);
-//    printf("MonumentTraversal: %" PRId64" bloom+debloom+terminator + (colour)\n", 0);
-//
-//	uint64_t total = bloo1->tai + terminator-> get_total_memory() + false_positives->get_total_memory();
-//printf("Initial max: %" PRId64"\n", total);
-//uint64_t estimated_bloom_size = (uint64_t) (genome_size * NBITS_PER_KMER);
-//printf("Memory_max: %" PRId64" in Mb %d\n",estimated_bloom_size , max_memory);
-//    printf("END---------Check boolean:%i\t%i\n", LOAD_BRANCHING_KMERS, DUMP_BRANCHING_KMERS);
-
-
-//    MemoryUtils::estimate_memory(file_name, max_memory);//, bloo1, false_positives);
-//    MemoryUtils::estimate_memory(solid_kmers_colour, bloo1, false_positives, terminator); //, terminator);)
-//    exit(-1);
-
-
-//    delete terminator;
-//	delete bloo1;
-//	delete false_positives;
-//	delete traversal;
-
-
-//
-//    printf("Start while\n");
     while (terminator->next(&kmer))
     {
 
@@ -557,7 +547,7 @@ inline void assemble_partition(char *solid_kmer_partition_file)
             }
             if (assemble_only_one_region != NULL)
                 break;
-//            printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
+
 //exit(-1);
         }
 //		printf("Done while look is assemble()\n");
@@ -571,28 +561,41 @@ inline void assemble_partition(char *solid_kmer_partition_file)
             break;
 
     }
-    fclose(file_assembly);
+
 
     fprintf (stderr,"\n Total nt assembled  %lli  nbContig %lli\n",totalnt,nbContig);
     fprintf (stderr,"\n Max contig len  %lli (debug: max len left %lli, max len right %lli)\n",max_contig_len,mlenleft,mlenright);
 
     STOPWALL(assembly,"Assembly");
+    MemoryMonitor::printValue("should be bigger here");
 
     free(left_traversal);
     free(right_traversal);
+    free(left_colour_traversal);
+    free(right_colour_traversal);
     free(contig);
-//    SolidKmers->close();
+    free(contig_colour);
+
+    fclose(file_assembly);
+    fclose(file_colour_assembly);
+    MemoryMonitor::printValue("Free some");
+
     solid_kmers_colour->close();
-//    delete SolidKmers;
     delete solid_kmers_colour;
+    MemoryMonitor::printValue("maybe the min here");
+
+    delete bloom;
+	delete false_positives;
     delete terminator;
     delete traversal;
-//	printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
+
+    MemoryMonitor::printValue("why not decrease??");
+
     printf("===========DONE=========EXIT========\n");
-//exit(-9);
+exit(-9);
 }
 
-void divided_solid_kmer_colour_into_partitions(int nb_partitions, char solid_kmer_partition_file[][1024]){
+void divided_solid_kmer_colour_into_partitions(int nb_partitions, char solid_kmer_partition_file[][Utils::MaxFileNameLength]){
 
     printf("Split into loop:%d\n", nb_partitions);
 //    int nb_partitions = 3;
@@ -656,17 +659,19 @@ void divided_solid_kmer_colour_into_partitions(int nb_partitions, char solid_kme
 	printf("Total:%d\t%d\t%d\t%d\n",total, total2, total_sub, total/10*9*nb_partitions);
 }
 
-void test_partitions(int nb_partitions, char solid_kmer_partition_file[][1024]){
-
+void test_partitions(int nb_partitions, char solid_kmer_partition_file[][Utils::MaxFileNameLength]){
+	MemoryMonitor::printValue("Partition");
 	for (int p=0;p<nb_partitions;p++) {
 		assemble_partition(solid_kmer_partition_file[p]);
+		MemoryMonitor::printValue("End each partition");
 	}
+	MemoryMonitor::printValue("End Partition");
 }
 
 
-void test_memory_partitions(int nb_partitions, char solid_kmer_partition_file[][1024]){
-	long long maxlen=10000000;
-	BinaryBank *solid_kmers_colour_partition[nb_partitions];
+void test_memory_partitions(int nb_partitions, char solid_kmer_partition_file[][Utils::MaxFileNameLength]){
+//	long long maxlen=10000000;
+//	BinaryBank *solid_kmers_colour_partition[nb_partitions];
 
 	uint64_t memory[nb_partitions];
 	for (int p=0;p<nb_partitions;p++) {
@@ -675,15 +680,15 @@ void test_memory_partitions(int nb_partitions, char solid_kmer_partition_file[][
 	printf("Summary memory usage for all partitions:\n");
 	for (int p=0;p<nb_partitions;p++) {
 
-		printf("P%d: %llu %.2f\n", p, memory[p], memory[p]/(8.0)/(1024.0) );
+		printf("P%d: %lu %.3fKB %.2fMB\n", p, memory[p], bits_to_KB(memory[p]), bits_to_MB(memory[p]));
 	}
 
 }
 
 int main(int argc, char *argv[])
 {
-    printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
 
+	MemoryMonitor::printValue("Init");
     if(argc <  6)
     {
         fprintf (stderr,"usage:\n");
@@ -696,7 +701,7 @@ int main(int argc, char *argv[])
     bool FOUR_BLOOM_VERSION = true;
 
      // shortcuts to go directly to assembly using serialized bloom and serialized hash
-    int START_FROM_SOLID_KMERS=0; // if = 0, construct the fasta file of solid kmers, if = 1, start directly from that file 
+    int START_FROM_SOLID_KMERS=0; // if = 0, construct the fasta file of solid kmers, if = 1, start directly from that file
     int LOAD_FALSE_POSITIVE_KMERS=0; // if = 0, construct the fasta file of false positive kmers (debloom), if = 1, load that file into the hashtable
     int NO_FALSE_POSITIVES_AT_ALL=0; // if = 0, normal behavior, if = 1, don't load false positives (will be a probabilistic de bruijn graph)
     int max_disk_space = 0;// let dsk decide
@@ -719,15 +724,15 @@ int main(int argc, char *argv[])
 
         if (strcmp(argv[n_a],"--titus-mode")==0)
             NO_FALSE_POSITIVES_AT_ALL = 1;
-        
-        
+
+
         if (strcmp(argv[n_a],"-d")==0)
             max_disk_space = atoi(argv[n_a+1]);
-        
-        
+
+
         if (strcmp(argv[n_a],"-maxc")==0)
 	    max_couv = atoi(argv[n_a+1]);
-        
+
         if (strcmp(argv[n_a],"--le-changement")==0)
             {printf("c'est maintenant!\n");exit(0);}
     }
@@ -752,7 +757,7 @@ int main(int argc, char *argv[])
 
     kmerMask=(((kmer_type)1)<<(sizeKmer*2))-1;
     double lg2 = log(2);
-   
+
     if (sizeKmer > 128)
     {
         FOUR_BLOOM_VERSION = false;
@@ -763,12 +768,12 @@ int main(int argc, char *argv[])
      *
      * m = -nln(p) / (ln2)^2
      */
-    if (!FOUR_BLOOM_VERSION) 
+    if (!FOUR_BLOOM_VERSION)
       NBITS_PER_KMER = log(16*sizeKmer*(lg2*lg2))/(lg2*lg2); // needed to process argv[5]
-    else 
+    else
       NBITS_PER_KMER = rvalues[sizeKmer][1];
 
-    // solidity 
+    // solidity
     nks =NNKS;
     if(argc >=  4)
     {
@@ -784,7 +789,7 @@ int main(int argc, char *argv[])
         uint64_t estimated_bloom_size = (uint64_t) (genome_size * NBITS_PER_KMER);
 
        uint64_t estimated_nb_FP =  (uint64_t)(genome_size * 4 * powf(0.6,11)); // just indicative
-    
+
 //       max_memory = max( (1LL << estimated_bloom_size)/8LL /1024LL/1024LL, 1LL );
         max_memory =  max((int64_t) estimated_bloom_size/8LL /1024LL/1024LL,1LL);
 
@@ -798,7 +803,7 @@ int main(int argc, char *argv[])
         strcpy(Utils::outfile_prefix,argv[5]);
     }
 
-//    printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
+
 
 
     fprintf (stderr,"taille cell %zu \n", sizeof(cell<kmer_type>));
@@ -813,17 +818,28 @@ int main(int argc, char *argv[])
 //
 //    char* b = const_cast<char*> (solid_kmers_colour_file);
 //    assemble_partition(b);
-	int nb_splits=10;
+
+	int nb_splits=2;
+//	MemoryMonitor::printValue();
 	char solid_kmer_partition_file[nb_splits][1024];
+
 	Utils::initilise_partition_names(solid_kmer_partition_file, nb_splits);
 
 	Bank *ReadsTest = new Bank(argv[1]);
 	SortingCountPartitions::sorting_count_partitions(ReadsTest, solid_kmer_partition_file, max_memory, max_disk_space, nb_splits);
+//	MemoryMonitor::printValue("after counting");
+//	ReadsTest->close();
 	delete ReadsTest;
+
+//	exit(-1);
+for (int i = 0; i < 1; ++i) {
 
 
 	test_memory_partitions(nb_splits, solid_kmer_partition_file);
+	MemoryMonitor::printValue("after test memory: ");
 
+}
+	exit(-1);
 //	test_memory_partitions_using_number_only(nb_splits, solid_kmer_partition_file);
 	test_partitions(nb_splits, solid_kmer_partition_file);
 
@@ -864,7 +880,7 @@ printf("==========START_FROM_SOLID_KMERS\n");
     	printf("==========LOAD_FALSE_+ve_KMERS\n");//Don't think we need to add colour to this section, double check LATER
         debloom(order, max_memory);
     }
-    printf("Memory: %zu %zu\n", getPeakRSS(), getCurrentRSS() );
+
 
 	int LOAD_BLOOM_FROM_DUMP = 0;
     if(!LOAD_BLOOM_FROM_DUMP){} //TODO later

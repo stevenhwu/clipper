@@ -1,23 +1,23 @@
+#include <cstdlib>
 #include <cstdio>
 #include <cstring>
-#include <utility>
-#include <vector>
+//#include <utility>
+//#include <vector>
 
-#ifndef ASSERTS
-#define NDEBUG // disable asserts, they're computationnally intensive
-#endif 
 
-#include <stdio.h>
-#include <assert.h>
-#include <algorithm> // for min
+//#include <stdio.h>
+//#include <assert.h>
+//#include <algorithm> // for min
 #include "KmerColour.h"
+//#include <cstring>
 
-#include <iostream>
-#include <unordered_map>
-#include <map>
-#include <memory>
-#include <cstdlib>
-#include <stdlib.h>
+//#include <cstring>
+
+//#include <iostream>
+//#include <unordered_map>
+//#include <map>
+//#include <memory>
+//#include <stdlib.h>
 //using namespace std;
 
 //extern int sizeKmer;

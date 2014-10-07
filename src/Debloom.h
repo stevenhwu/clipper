@@ -17,6 +17,7 @@
 #include "Hash16.h"
 #include "Utils.h"
 #include "Traversal.h"
+#include "Memory.h"
 
 using namespace std;
 

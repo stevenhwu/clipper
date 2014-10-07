@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <sys/time.h>
-#include <string.h>
+#include <cstring>
 #include <string>
 #include <inttypes.h>
 #include <cmath> // for log2f

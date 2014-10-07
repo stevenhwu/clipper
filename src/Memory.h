@@ -14,8 +14,23 @@
 #include "Traversal.h"
 #include "Debloom.h"
 
-size_t getPeakRSS( );
-size_t getCurrentRSS( );
+double bits_to_MB(double bits);
+double bits_to_KB(double bits);
+
+
+class MemoryMonitor{
+
+private:
+	static int parseLine(char* line);
+
+public:
+	static int getValue();
+	static void printValue(char* message = "");
+
+	static size_t getPeakRSS( );
+	static size_t getCurrentRSS( );
+
+};
 
 class MemoryUtils{
 
@@ -34,4 +49,6 @@ public:
 
 
 };
+
+
 #endif /* MEMORY_H_ */

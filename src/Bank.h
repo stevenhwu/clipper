@@ -51,6 +51,7 @@ class Bank{
         Bank(char *fname);
         Bank(char **fname, int nb_files_);
         void init(char **fname, int nb_files_);
+        void init2(char **fname, int nb_files_);
         void close();
 
         bool get_next_seq_colour(char **nseq, int *len, KmerColour *col);

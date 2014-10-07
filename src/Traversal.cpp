@@ -406,7 +406,7 @@ int Traversal::traverse(kmer_type starting_kmer, char* resulting_sequence, int s
         for (int cur_nt = 0; cur_nt < nnt; cur_nt++)
         {
             resulting_sequence[len_extension]=newNT[cur_nt];
-            //TODO: add resulting colour, from avance
+
 //            resulting_colour[len_extension]=newColour[cur_nt];
             len_extension++;
             previous_kmer = current_kmer;
@@ -727,7 +727,7 @@ int Traversal::simple_paths_avance_colour(kmer_type kmer, int strand, bool first
 //UPDATE!! CTGGCCAAAAATTCTACCTGTCCACCTGTCC exist in fp list? why?
         }
         *newNT = bin2NT[good_nt];
-        //TODO working on matching colour: both dir missing
+
 //        Kmer:2005228447435396837 Does not exist. C:0
 //        RevComp:4345899215275863891	0
 		KmerColour second_kmer_colour;
@@ -1219,7 +1219,7 @@ bool MonumentTraversal::all_consensuses_almost_identical(set<string> consensuses
     }
     return true;
 }
-//TODO: implement here!!
+
 bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start_strand,
 		char *consensus, KmerColour *new_colour, int &consensus_length, kmer_type previous_kmer, set<kmer_type> *all_involved_extensions)
 {
@@ -1287,7 +1287,8 @@ bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start
     }
     else{
     	bool validated = validate_consensuses(consensuses, consensus, consensus_length);
-    	printf("FAIL!! Not yet implemented:%d %d %d\t", success, validated, consensuses.size());
+//    	printf("FAIL!! Not yet implemented:%d %d %d\t", success, validated, consensuses.size());
+//    	printf("Double check colours!!")//TODO
     	for(set<string>::iterator c0 = consensuses.begin(); c0 != consensuses.end(); c0++) {
     	   string element = *c0;
 //    	   printf("%s\n",element.data());
@@ -1416,7 +1417,6 @@ char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand, bool f
     // * computing all possible paths between start and end
     // * returns one flattened consensus sequence
     int newNT_length;
-    //TODO: Hard to implement this one: explore_branching
     bool success = explore_branching_colour(kmer, current_strand, newNT, new_colour, newNT_length, previous_kmer);
 
     if(debug){

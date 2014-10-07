@@ -451,11 +451,6 @@ if (nbkmers_solid==0){
   return fp;
 }
 
-double toMB(double value)
-{
-  return value / 8LL/1024LL/1024LL;
-}
-
 void print_size_summary(FPSet *fp)
 {
   int bits_per_FP_element = FPSet::bits_per_element;
@@ -464,12 +459,12 @@ void print_size_summary(FPSet *fp)
            size_T1 = fp->capacity() * FPSet::bits_per_element;
   double total_size = (double)(size_B1 + size_T1);
 
-  fprintf(stderr,"Size of the Bloom table  : %.2lf MB\n", toMB(size_B1) );  
+  fprintf(stderr,"Size of the Bloom table  : %.2lf MB\n", bits_to_MB(size_B1) );
   fprintf(stderr,"                           %.2lf bits / solid kmer\n", b1_size/(double)(nbkmers_solid) );  
-  fprintf(stderr, "Size of the FP table     : %lli FP x %d bits =  %.2lf MB  \n", fp->capacity(), bits_per_FP_element, toMB((double)(size_T1)) );
+  fprintf(stderr, "Size of the FP table     : %lli FP x %d bits =  %.2lf MB  \n", fp->capacity(), bits_per_FP_element, bits_to_MB((double)(size_T1)) );
   fprintf(stderr,"                                      actual implementation : %.2lf bits / solid kmer\n", size_T1/(double)nbkmers_solid);
   fprintf(stderr,"  assuming list of kmers, i.e. sizeof(kmer_type) bits / FP : %.2lf bits / solid kmer \n\n",(fp->capacity()*sizeof(kmer_type)*8LL)/(double)(nbkmers_solid));
-  fprintf(stderr,"      Total %.2lf MB for %lld solid kmers  ==>  %.2lf bits / solid kmer\n\n", toMB(total_size), nbkmers_solid, total_size / nbkmers_solid);  
+  fprintf(stderr,"      Total %.2lf MB for %lld solid kmers  ==>  %.2lf bits / solid kmer\n\n", bits_to_MB(total_size), nbkmers_solid, total_size / nbkmers_solid);
 }
 
 void print_size_summary(FPSetCascading4 *fp)
@@ -481,12 +476,12 @@ void print_size_summary(FPSetCascading4 *fp)
     size_T4 = fp->false_positives->capacity() * FPSet::bits_per_element;
   double total_size = (double)(size_B1 + size_B2 + size_B3 + size_B4 + size_T4);
 
-  fprintf(stderr,"Size of the Bloom table (B1)  : %.2lf MB  %llu\n", toMB((double)size_B1), size_B1);
-  fprintf(stderr,"Size of the Bloom table (B2)  : %.2lf MB  %llu\n", toMB((double)size_B2), size_B2);
-  fprintf(stderr,"Size of the Bloom table (B3)  : %.2lf MB  %llu\n", toMB((double)size_B3), size_B3);
-  fprintf(stderr,"Size of the Bloom table (B4)  : %.2lf MB  %llu\n", toMB((double)size_B4), size_B4);
-  fprintf(stderr,"Size of the FP table (T4)     : %.2lf MB  %llu\n", toMB((double)size_T4), size_T4);
-  fprintf(stderr,"      Total %.2lf MB for %lld solid kmers  ==>  %.2lf bits / solid kmer\n\n", toMB(total_size), nbkmers_solid, total_size / nbkmers_solid);
+  fprintf(stderr,"Size of the Bloom table (B1)  : %.2lf MB  %llu\n", bits_to_MB((double)size_B1), size_B1);
+  fprintf(stderr,"Size of the Bloom table (B2)  : %.2lf MB  %llu\n", bits_to_MB((double)size_B2), size_B2);
+  fprintf(stderr,"Size of the Bloom table (B3)  : %.2lf MB  %llu\n", bits_to_MB((double)size_B3), size_B3);
+  fprintf(stderr,"Size of the Bloom table (B4)  : %.2lf MB  %llu\n", bits_to_MB((double)size_B4), size_B4);
+  fprintf(stderr,"Size of the FP table (T4)     : %.2lf MB  %llu\n", bits_to_MB((double)size_T4), size_T4);
+  fprintf(stderr,"      Total %.2lf MB for %lld solid kmers  ==>  %.2lf bits / solid kmer\n\n", bits_to_MB(total_size), nbkmers_solid, total_size / nbkmers_solid);
 }
 
 uint64_t get_FPSetCascading4_size (FPSetCascading4 *fp)
@@ -586,6 +581,7 @@ int debloom_partition(char *solid_kmer_partition_file, int max_memory)
     // at the end, only the positive extensions which are not solid are kept
     while (solid_kmer_colour->read_kmer_colour(&kmer, &kmer_colour))
     {
+
         hasht1->add(kmer);
 
         NbSolidKmer++;

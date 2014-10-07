@@ -1,3 +1,5 @@
+
+
 CC=g++
 CFLAGS = -O4 -Wall -D_FILE_OFFSET_BITS=64 -std=c++11 # needed to handle files > 2 GB on 32 bits systems
 SOURCES=Pool.cpp Bank.cpp Bloom.cpp Hash16.cpp LargeInt.cpp \
@@ -89,8 +91,8 @@ endif
 
 all: $(EXEC)
 
-minia: clean $(OBJ) Minia.cpp
-	$(CC) -o $@ $(OBJ) Minia.cpp $(CFLAGS) -lz
+minia: clean $(OBJ) src/Minia.cpp
+	$(CC) -o $@ $(OBJ) src/Minia.cpp $(CFLAGS) -lz
 
 inc: $(OBJ) src/Minia.cpp
 	$(CC) -o minia $(OBJ) src/Minia.cpp $(CFLAGS) -lz
@@ -126,7 +128,7 @@ obj/%.o: test/%.cpp
 
 test: $(OBJ) $(TEST_OBJ)
 	echo "callTest" $(TEST_OBJ) $(OBJ) $(SRC_DIR)%.cpp $(SRC_DIR)%.h
-	$(CC) $(CFLAGS) $(TEST_OBJ) $(OBJ) -I$(CURDIR) $(CURDIR)/include/gtest_main.a -lpthread -lz -o your_test;
+#	$(CC) $(CFLAGS) $(TEST_OBJ) $(OBJ) -I$(CURDIR) $(CURDIR)/include/gtest_main.a -lpthread -lz -o your_test;
 #	$(CC) $(CFLAGS) $(TEST_SRC) -I$(CURDIR) $(CURDIR)/include/gtest_main.a -lpthread -o your_test;
 #	$(CC) $(CFLAGS) $(TEST_SRC) -I$(CURDIR) $(CURDIR)/include/libgtest_main.a $(CURDIR)/include/libgtest.a -lpthread -o your_test;
 #	  g++ -I${GTEST_DIR}/include path/to/your_test.cc libgtest.a -o your_test
@@ -136,8 +138,10 @@ debug2: clean $(TEST_OBJ)# %Test.cpp $(SRP)%.cpp $(SRP)%.h
 	echo $(CFLAGS)
 	$(CC) -o $@ -c $< $(CFLAGS) -I$(GTEST_DIR) -I$(CURDIR)
 
-debug: buildrepo $(OBJS)
-	echo $(TEST_OBJ)
+debug: CFLAGS += -g -O0
+debug: buildrepo $(OBJ) src/Minia.cpp
+	$(CC) -o $@_minia $(OBJ) src/Minia.cpp $(CFLAGS)  -lz
+
 
 
 buildrepo:

@@ -49,15 +49,41 @@
 #endif
 
 
+int MemoryMonitor::parseLine(char* line){
+	int i = strlen(line);
+	while (*line < '0' || *line > '9') line++;
+	line[i-3] = '\0';
+	i = atoi(line);
+	return i;
+}
 
 
+int MemoryMonitor::getValue(){ //Note: this value is in KB!
+	sleep(3);
+	FILE* file = fopen("/proc/self/status", "r");
+	int result = -1;
+	char line[128];
 
+
+	while (fgets(line, 128, file) != NULL){
+		if (strncmp(line, "VmSize:", 7) == 0){
+			result = parseLine(line);
+			break;
+		}
+	}
+	fclose(file);
+	return result;
+}
+
+void MemoryMonitor::printValue(char* message){
+	printf("MemoryMonitor: %d KB (%s) \n",getValue(), message);
+}
 /**
  * Returns the peak (maximum so far) resident set size (physical
  * memory use) measured in bytes, or zero if the value cannot be
  * determined on this OS.
  */
-size_t getPeakRSS( )
+size_t MemoryMonitor::getPeakRSS( )
 {
 #if defined(_WIN32)
 	/* Windows -------------------------------------------------- */
@@ -103,7 +129,7 @@ size_t getPeakRSS( )
  * Returns the current resident set size (physical memory use) measured
  * in bytes, or zero if the value cannot be determined on this OS.
  */
-size_t getCurrentRSS( )
+size_t MemoryMonitor::getCurrentRSS( )
 {
 #if defined(_WIN32)
 	/* Windows -------------------------------------------------- */
@@ -189,9 +215,10 @@ uint64_t MemoryUtils::estimate_memory_number_only(char* solid_kmers_colour_file,
 
 uint64_t MemoryUtils::estimate_memory(char* solid_kmers_colour_file,
 		int max_memory) {
-
+	MemoryMonitor::printValue("Estimating1:");
 	Bloom* bloom = bloom_create_bloo1_partition((BloomCpt *) NULL,
 			solid_kmers_colour_file, false);
+
 	debloom_partition(solid_kmers_colour_file, max_memory);
 
 //	estimated_BL1_freesize =  (uint64_t)(solid_kmer_colour->nb_elements()*NBITS_PER_KMER);
@@ -205,18 +232,20 @@ uint64_t MemoryUtils::estimate_memory(char* solid_kmers_colour_file,
 			return_file_name(solid_kmers_colour_file),
 			kSizeOfKmerType + kSizeOfKmerColour, 0);
 	uint64_t genome_size_zero = 0;
-//	BranchingTerminator *terminator = new BranchingTerminatorColour(
-//			solid_kmers_colour, genome_size_zero, bloom, false_positives);
+
 
 	BranchingTerminatorColour terminator  (
 				solid_kmers_colour, genome_size_zero, bloom, false_positives);
-	uint64_t memory = estimate_memory(solid_kmers_colour, bloom, false_positives, &terminator); //, terminator);
 
+	uint64_t memory = estimate_memory(solid_kmers_colour, bloom, false_positives, &terminator); //, terminator);
+	MemoryMonitor::printValue("Estimating2:");
 	delete bloom;
 	delete false_positives;
 	solid_kmers_colour->close();
 	delete solid_kmers_colour;
-//	delete terminator;
+
+//	delete &terminator;
+	MemoryMonitor::printValue("Estimating after:");
 //	printf("Max:%d\nMax FP:%d", max_memory*8*1024*1024, * 4 * powf(0.6,11)))
 
 	printf("End estimating memory\n============================\n");
@@ -241,41 +270,41 @@ uint64_t MemoryUtils::estimate_memory(BinaryBank* solid_kmers_colour,
 	//    traversal->SetSolidKmersColour(solid_kmers_colour, max_memory);
 	off_t nbElements = solid_kmers_colour->nb_elements();
 
-		printf("Estimate bloom %llu\n", (uint64_t) (nbElements*NBITS_PER_KMER));
-		printf("Actual   bloom %llu\n", bloom->tai);
+	printf("Estimate bloom %llu\n", (uint64_t) (nbElements*NBITS_PER_KMER));
+	printf("Actual   bloom %llu\n", bloom->tai);
 
-		double fpRate = powf(0.62, NBITS_PER_KMER);
-		printf("nbElement %llu. should be (3354114)\n", nbElements);
+	double fpRate = powf(0.62, NBITS_PER_KMER);
+//		printf("nbElement %llu. should be (3354114)\n", nbElements);
 //		int nbFP = (int) ceilf(nbElements*0.5);// 1-log(2) = 0.3
-		int nbFP = (int) ceilf(nbElements*7*fpRate);
-	//	nbFP = 1109063;
-		printf("Estimate FP: rate%f\nB2:%llu %llu\n"
-				"B3:%llu %llu\n"
-				"B4:%llu %llu\n"
-				"T4:%llu %llu\n",fpRate,
-				(uint64_t) nbFP,
-				(uint64_t) ceilf(nbFP * NBITS_PER_KMER),
+	int nbFP = (int) ceilf(nbElements*7*fpRate);
+//	nbFP = 1109063;
+	printf("Estimate FP: rate%f\nB2:%llu %llu\n"
+			"B3:%llu %llu\n"
+			"B4:%llu %llu\n"
+			"T4:%llu %llu\n",fpRate,
+			(uint64_t) nbFP,
+			(uint64_t) ceilf(nbFP * NBITS_PER_KMER),
 
-				(uint64_t) ceilf(nbElements*fpRate),
-				(uint64_t) ceilf(nbElements*fpRate * NBITS_PER_KMER),
+			(uint64_t) ceilf(nbElements*fpRate),
+			(uint64_t) ceilf(nbElements*fpRate * NBITS_PER_KMER),
 
-				(uint64_t) ceilf(nbFP*fpRate),
-				(uint64_t) ceilf(nbFP*fpRate * NBITS_PER_KMER),
+			(uint64_t) ceilf(nbFP*fpRate),
+			(uint64_t) ceilf(nbFP*fpRate * NBITS_PER_KMER),
 
-				(uint64_t) ceilf(nbElements*fpRate*fpRate),
-				(uint64_t) ceilf(nbElements*fpRate*fpRate) * FPSet::bits_per_element );
+			(uint64_t) ceilf(nbElements*fpRate*fpRate),
+			(uint64_t) ceilf(nbElements*fpRate*fpRate) * FPSet::bits_per_element );
 
-		int fp_total = (int) ceilf(nbFP * NBITS_PER_KMER + nbElements * fpRate * NBITS_PER_KMER
-			+ nbFP * fpRate * NBITS_PER_KMER
-			+ nbElements * fpRate * fpRate * FPSet::bits_per_element);
+	int fp_total = (int) ceilf(nbFP * NBITS_PER_KMER + nbElements * fpRate * NBITS_PER_KMER
+		+ nbFP * fpRate * NBITS_PER_KMER
+		+ nbElements * fpRate * fpRate * FPSet::bits_per_element);
 
-		printf("Estimate FP %llu\n", fp_total);
-		printf("Actual   FP %llu\n", false_positives->get_total_memory());
+	printf("Estimate FP %llu\n", fp_total);
+	printf("Actual   FP %llu\n", false_positives->get_total_memory());
 
-		printf("Estimate terminator??? %llu %llu %llu (how many inster??\n", (uint64_t) ceilf(nbElements*fpRate), (uint64_t) ceilf(nbElements*fpRate*4), (uint64_t) ceilf(nbElements*fpRate * 10) );
-		printf("Actual   terminator %llu\n", terminator->get_total_memory());
-
-
+	printf("Estimate terminator??? %llu %llu %llu (how many inster??\n", (uint64_t) ceilf(nbElements*fpRate), (uint64_t) ceilf(nbElements*fpRate*4), (uint64_t) ceilf(nbElements*fpRate * 10) );
+	printf("Actual   terminator %llu\n", terminator->get_total_memory());
+	uint64_t est_terminator =  (uint64_t) ceilf(nbElements*fpRate*4);
+	uint64_t total_estimate = (nbElements*NBITS_PER_KMER) + fp_total + est_terminator;
 	printf("\n====================\nMemory usage:\n");
 	uint64_t min_solid = (1 * solid_kmers_colour->nb_elements()
 			* OAHashColour::size_entry());
@@ -297,10 +326,21 @@ uint64_t MemoryUtils::estimate_memory(BinaryBank* solid_kmers_colour,
 
 	uint64_t total_bits = bloom->tai + terminator->get_total_memory()
 			+ false_positives->get_total_memory();
-	printf("Initial max: %" PRId64"\n", total_bits);
-
+	printf("Initial max: %" PRId64" %.3f\n", total_bits, bits_to_KB(total_bits));
+	printf("Estimate   : %" PRId64" %.2f\n", total_estimate, bits_to_KB(total_estimate));
 	return total_bits;
 }
 
 
 
+
+
+
+double bits_to_MB(double bits)
+{
+  return bits / 8LL/1024LL/1024LL;
+}
+double bits_to_KB(double bits)
+{
+  return bits / 8LL/1024LL;
+}

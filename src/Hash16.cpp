@@ -91,9 +91,6 @@ void Hash16::insert(hash_elem graine, int value)
 //return 1 if graine first time seen
 int Hash16::add(hash_elem graine)
 {
-    
-    
-
     unsigned int clef ;
     cell<hash_elem> * cell_ptr, *newcell_ptr;
     cell_ptr_t  newcell_internal_ptr;
@@ -105,17 +102,16 @@ int Hash16::add(hash_elem graine)
 
     while(cell_ptr != NULL &&  cell_ptr->graine != graine)
     {
-
         cell_ptr = storage->internal_ptr_to_cell_pointer(cell_ptr->suiv);
     }
     if (cell_ptr==NULL) //graine non trouvee , insertion au debut
     {
-
         newcell_internal_ptr = storage->allocate_cell();
         newcell_ptr = storage->internal_ptr_to_cell_pointer(newcell_internal_ptr);
-        newcell_ptr->val=1; 
+        newcell_ptr->val=1;
         newcell_ptr->graine=graine;
         newcell_ptr->suiv=datah[clef];
+
         datah[clef] = newcell_internal_ptr;
         nb_elem++;
         return 1;

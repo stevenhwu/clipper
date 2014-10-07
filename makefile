@@ -1,7 +1,13 @@
-
+UNAME := $(shell uname)
 
 CC=g++
-CFLAGS = -O4 -Wall -D_FILE_OFFSET_BITS=64 -std=c++11 # needed to handle files > 2 GB on 32 bits systems
+CFLAGS = -O4 -Wall -D_FILE_OFFSET_BITS=64 -std=c++11# needed to handle files > 2 GB on 32 bits systems
+
+ifeq ($(UNAME), FreeBSD)
+CC=g++48
+CFLAGS += -D_GLIBCXX_USE_C99
+endif
+
 SOURCES=Pool.cpp Bank.cpp Bloom.cpp Hash16.cpp LargeInt.cpp \
 	Kmer.cpp Terminator.cpp Traversal.cpp LinearCounter.cpp \
 	Set.cpp Utils.cpp SortingCount.cpp Debloom.cpp OAHash.cpp \
@@ -88,10 +94,16 @@ ifneq ($(largeintlib),0)
     CFLAGS += -D_$(largeintlib) -DKMER_PRECISION=$(KMER_PRECISION)
 endif
 
+.PHONY: minia
+
+.DEFAULT: inc
 
 all: $(EXEC)
 
-minia: clean $(OBJ) src/Minia.cpp
+
+
+
+minia: clean $(OBJDIR) $(OBJ) src/Minia.cpp
 	$(CC) -o $@ $(OBJ) src/Minia.cpp $(CFLAGS) -lz
 
 inc: $(OBJ) src/Minia.cpp
@@ -100,7 +112,8 @@ inc: $(OBJ) src/Minia.cpp
 clean:
 	@rm -rf $(OBJ) $(TEST_OBJ)
 
-
+$(OBJDIR):
+	mkdir -p $(OBJDIR) 
 obj/%.o: src/%.cpp src/%.h test/%.cpp
 	echo "BOTH!!"
 	@$(call make-depend,$<,$@,$(subst .o,.d,$@))

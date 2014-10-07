@@ -5,7 +5,7 @@
 #include <stdio.h>
 //#include <string.h>
 //#include <algorithm> // for max
-//#include <malloc.h>
+
 #include "OAHash.h"
 #include "KmerColour.h"
 

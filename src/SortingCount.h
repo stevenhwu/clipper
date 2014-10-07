@@ -1,3 +1,6 @@
+#ifndef SORTINGCOUNT_H
+#define SORTINGCOUNT_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -9,8 +12,7 @@
 #include <sys/statvfs.h> // to determine available disk space
 #include <dirent.h> // to clear the temp directory
 
-#ifndef SORTINGCOUNT_H
-#define SORTINGCOUNT_H
+
 
 #include "Bank.h"
 #include "Kmer.h"

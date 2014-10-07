@@ -1,3 +1,6 @@
+#ifndef SORTINGCOUNTPARTITIONS_H
+#define SORTINGCOUNTPARTITIONS_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -8,19 +11,20 @@
 #include <vector>
 #include <sys/statvfs.h> // to determine available disk space
 #include <dirent.h> // to clear the temp directory
+#include <cstdint>
 
-#ifndef SORTINGCOUNTPARTITIONS_H
-#define SORTINGCOUNTPARTITIONS_H
 
 #include "Bank.h"
-#include "Kmer.h"
+//#include "Kmer.h"
 #include "Utils.h"
-#include "OAHash.h"
+//#include "OAHash.h"
+
+
 
 
 using namespace std;
-
 typedef uint32_t uint_abundance_t;
+
 
 class SortingCountPartitions {
 

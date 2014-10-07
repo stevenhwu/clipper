@@ -1,12 +1,26 @@
 #include "SortingCount.h"
-#include "inttypes.h"
+//#include "inttypes.h"
 #include <sys/resource.h> // for getrlimit()
+#include <dirent.h>
+#include <sys/stat.h>
+#include <sys/statvfs.h>
+#include <unistd.h>
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include "Bank.h"
+#include "Kmer.h"
+#include "KmerColour.h"
+#include "OAHash.h"
+#include "Utils.h"
+
 #if OMP
 #include "omp.h"
 #endif
 
 #include "Memory.h"
-#include <malloc.h>
 
 #define SINGLE_BAR 1
 

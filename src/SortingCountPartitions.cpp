@@ -1,16 +1,23 @@
 #include "SortingCountPartitions.h"
-#include "inttypes.h"
+//#include "inttypes.h"
 #include <sys/resource.h> // for getrlimit()
-#if OMP
-#include "omp.h"
-#endif
-
+#include <unistd.h>
+#include <algorithm>
+#include <cmath>
+//#include <cstdint>
+#include <dirent.h>
+#include <sys/statvfs.h>
 #include <stdio.h>
 #include <ctime>
 #include <cstdlib>
 
+#if OMP
+#include "omp.h"
+#endif
+
+#include "KmerColour.h"
 #include "Memory.h"
-#include <malloc.h>
+
 
 #define SINGLE_BAR 1
 

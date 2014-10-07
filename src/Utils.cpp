@@ -209,7 +209,7 @@ Bloom *bloom_create_bloo1(T *bloom_counter, bool from_dump)
 template <typename T> //bloocpt or bloocpt3
 Bloom *bloom_create_bloo1_partition(T *bloom_counter, char *solid_kmer_partition_file, bool from_dump)
 {
-printf("In bloom_create_bloo1_partition: %s\n", solid_kmer_partition_file);
+//printf("In bloom_create_bloo1_partition: %s\n", solid_kmer_partition_file);
     BinaryBank * solid_kmer_colour;
 //	solid_kmer_colour->rewind_all();
 //    if(from_dump && nsolids) // from dump and known number of solid kmers

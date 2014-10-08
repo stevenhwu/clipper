@@ -8,7 +8,7 @@ ifeq ($(UNAME), FreeBSD)
 CC=g++48
 CFLAGS += -D_GLIBCXX_USE_C99
 #LDFLAGS= -L/usr/local/lib/gcc48/
-LDFLAGS= -Wl,-rpath,/usr/local/lib/gcc48
+LDFLAGS+= -Wl,-rpath,/usr/local/lib/gcc48
 endif
 
 SOURCES=Pool.cpp Bank.cpp Bloom.cpp Hash16.cpp LargeInt.cpp \

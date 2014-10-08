@@ -271,7 +271,7 @@ BranchingTerminator::BranchingTerminator(BinaryBank *given_SolidKmers,
     uint64_t nb_kmers = 0;
     nb_branching_kmers = 0;
 
-    uint64_t previous_estimated_nb_branching_kmers, estimated_nb_branching_kmers;
+    uint64_t estimated_nb_branching_kmers; //previous_estimated_nb_branching_kmers,
     uint64_t nbElements = SolidKmers->nb_elements();
 
 	while (SolidKmers->read_element(&kmer))
@@ -282,24 +282,26 @@ BranchingTerminator::BranchingTerminator(BinaryBank *given_SolidKmers,
 
         if ((nb_kmers % print_table_frequency) == 0 && nb_branching_kmers>0)
         {
-            previous_estimated_nb_branching_kmers = estimated_nb_branching_kmers;
+//            previous_estimated_nb_branching_kmers = estimated_nb_branching_kmers;
             estimated_nb_branching_kmers = (uint64_t)((1.0*nb_branching_kmers)/nb_kmers * nbElements);
             // minor todo: stop when previous_.. - estimated < threshold (pourquoi pas = 10% estimated)
-            fprintf (stderr,"%cExtrapolating the number of branching kmers from the first %dM kmers: %lld",13,(int)ceilf(nb_extrapolation/1024.0/1024.0),estimated_nb_branching_kmers);
-        }
+			fprintf(stderr,
+					"%cExtrapolating the number of branching kmers from the first %dM kmers: %" PRIu64,
+					13, (int) ceilf(nb_extrapolation / 1024.0 / 1024.0),
+					estimated_nb_branching_kmers);
+		}
 
         if (nb_kmers++ == nb_extrapolation)
             break;
     }
-    printf("solidKmer:%lu\n",nb_kmers);
+
     estimated_nb_branching_kmers = (uint64_t)((1.0*nb_branching_kmers)/nb_kmers * genome_size); // final estimation
     int estimated_NBITS_TERMINATOR = max( (int)ceilf(log2f(estimated_nb_branching_kmers)), 1);
-    printf("%lld %llu, %d\nEnd estimator\n", nb_branching_kmers, estimated_nb_branching_kmers, estimated_NBITS_TERMINATOR);
+    printf("%" PRIu64" %" PRIu64 ", %d\nEnd estimator\n", nb_branching_kmers, estimated_nb_branching_kmers, estimated_NBITS_TERMINATOR);
     fprintf (stderr,"\n");
 
 //     call Hash16 constructor
 //     branching_kmers = new Hash16(estimated_NBITS_TERMINATOR);
-
 
     branching_kmers = new AssocSet();
 
@@ -307,7 +309,7 @@ BranchingTerminator::BranchingTerminator(BinaryBank *given_SolidKmers,
     SolidKmers->rewind_all();
     nb_branching_kmers = 0;
     uint64_t nb_solid_kmers = 0;
-    printf("solidKmers_got_size:%zu\n", SolidKmers->get_sizeElement());
+
     while (SolidKmers->read_element(&kmer))
     {
         if (is_branching(kmer))
@@ -319,13 +321,13 @@ BranchingTerminator::BranchingTerminator(BinaryBank *given_SolidKmers,
 
         nb_solid_kmers++;
 		if ((nb_solid_kmers % print_table_frequency) == 0 && nb_branching_kmers > 0)
-			fprintf(stderr, "%cIndexing branching kmers %lld ", 13,
+			fprintf(stderr, "%cIndexing branching kmers %" PRIu64, 13,
 //					nb_branching_kmers);
 					estimated_nb_branching_kmers);
     }
 //    int nbElements = SolidKmers->nb_elements();
 
-    fprintf(stderr, "%cIndexing branching kmers %lld ", 13,
+    fprintf(stderr, "%cIndexing branching kmers %" PRIu64, 13,
     //					nb_branching_kmers);
     					estimated_nb_branching_kmers);
 
@@ -336,8 +338,10 @@ BranchingTerminator::BranchingTerminator(BinaryBank *given_SolidKmers,
 	branching_kmers->finalize();
 	branching_kmers->print_total_size();
 	total_memory = branching_kmers->get_total_memory();
-    fprintf (stderr,"\n\nAllocated memory for marking: %lld branching kmers x (%d+%d )B \n",nb_branching_kmers,sizeof(kmer_type),sizeof(set_value_t));
-    fprintf (stderr," actual implementation:  (sizeof(kmer_type) = %d B) + (sizeof(set_value_t) = %d B) per entry:  %.2f bits / solid kmer\n",sizeof(kmer_type),sizeof(set_value_t),(nb_branching_kmers*((sizeof(kmer_type)+sizeof(set_value_t))*8.0))/nb_solid_kmers);
+    fprintf (stderr,"\n\nAllocated memory for marking: %" PRIu64" branching kmers x (%zd+%zd )B \n",
+    		nb_branching_kmers,sizeof(kmer_type),sizeof(set_value_t));
+    fprintf (stderr," actual implementation: (sizeof(kmer_type) = %zd B) + (sizeof(set_value_t) = %zd B) per entry:  %.2f bits /solid kmer\n",
+    		sizeof(kmer_type),sizeof(set_value_t),(nb_branching_kmers*((sizeof(kmer_type)+sizeof(set_value_t))*8.0))/nb_solid_kmers);
 
     // init branching_kmers iterator for what happens next
      branching_kmers->start_iterator();
@@ -362,7 +366,9 @@ BranchingTerminator::BranchingTerminator(BinaryBank *branchingKmers, BinaryBank 
 	branching_kmers->finalize();
 
     if (verbose)
-        fprintf (stderr,"\nLoaded %lld branching kmers x %d B =  %.1f MB\n",nb_branching_kmers,sizeof(cell<kmer_type>),((1<<NBITS_TERMINATOR)*sizeof(cell<kmer_type>)*1.0)/1024.0/1024.0);
+		fprintf(stderr, "\nLoaded %" PRIu64" branching kmers x %zd B =  %.1f MB\n",
+				nb_branching_kmers, sizeof(cell<kmer_type> ),
+				((1 << NBITS_TERMINATOR) * sizeof(cell<kmer_type> ) * 1.0)/ 1024.0 / 1024.0);
 
     // init branching_kmers iterator for what happens next
     branching_kmers->start_iterator(); 
@@ -469,7 +475,7 @@ BranchingTerminatorColour::BranchingTerminatorColour(
 
         nb_solid_kmers++;
 		if ((nb_branching_kmers % print_table_frequency) == 0 && nb_branching_kmers > 0)
-			fprintf(stderr, "%cIndexing branching kmers %lld ", 13, nb_branching_kmers);
+			fprintf(stderr, "%cIndexing branching kmers %" PRIu64, 13, nb_branching_kmers);
 //					estimated_nb_branching_kmers);
     }
     off_t nbElements = SolidKmers->nb_elements();
@@ -483,9 +489,9 @@ BranchingTerminatorColour::BranchingTerminatorColour(
 	branching_kmers->finalize();
 	branching_kmers->print_total_size();
 	total_memory = branching_kmers->get_total_memory();
-	fprintf(stderr, "\n\nAllocated memory for marking: %lld branching kmers x (%d+%d )B \n",
+	fprintf(stderr, "\n\nAllocated memory for marking: %" PRIu64" branching kmers x (%zd+%zd )B \n",
 			nb_branching_kmers, sizeof(kmer_type), sizeof(set_value_t));
-	fprintf(stderr, " actual implementation:  (sizeof(kmer_type) = %d B) + (sizeof(set_value_t) = %d B) per entry:  %.2f bits / solid kmer\n",
+	fprintf(stderr, " actual implementation:  (sizeof(kmer_type) = %zd B) + (sizeof(set_value_t) = %zd B) per entry:  %.2f bits / solid kmer\n",
 			sizeof(kmer_type), sizeof(set_value_t),
 			(nb_branching_kmers * ((sizeof(kmer_type) + sizeof(set_value_t)) * 8.0)) / nb_solid_kmers);
 
@@ -514,7 +520,9 @@ BranchingTerminatorColour::BranchingTerminatorColour(BinaryBank *branchingKmers,
 	branching_kmers->finalize();
 
     if (verbose)
-        fprintf (stderr,"\nLoaded %lld branching kmers x %d B =  %.1f MB\n",nb_branching_kmers,sizeof(cell<kmer_type>),((1<<NBITS_TERMINATOR)*sizeof(cell<kmer_type>)*1.0)/1024.0/1024.0);
+		fprintf(stderr, "\nLoaded %" PRIu64" branching kmers x %zd B =  %.1f MB\n",
+				nb_branching_kmers, sizeof(cell<kmer_type> ),
+				((1 << NBITS_TERMINATOR) * sizeof(cell<kmer_type> ) * 1.0)/ 1024.0 / 1024.0);
 
     // init branching_kmers iterator for what happens next
     total_memory = branching_kmers->get_total_memory();
@@ -536,8 +544,7 @@ uint64_t BranchingTerminatorColour::estimator(uint64_t genome_size ) {
 	nb_branching_kmers = 0;
 
 	kmer_type kmer;
-	uint64_t previous_estimated_nb_branching_kmers = 0,
-			estimated_nb_branching_kmers = 0;
+	uint64_t estimated_nb_branching_kmers = 0;
 
 	while (SolidKmers->read_kmer_skip_colour(&kmer)) {
 
@@ -566,7 +573,7 @@ uint64_t BranchingTerminatorColour::estimator(uint64_t genome_size ) {
 			/ nb_kmers * nbElements); // final estimation
 	int estimated_NBITS_TERMINATOR = max(
 			(int) ceilf(log2f(estimated_nb_branching_kmers)), 1);
-	printf("TerminatorEstimate:%lld %llu, %d End estimator\n", nb_branching_kmers,
+	printf("TerminatorEstimate:%" PRIu64" %" PRIu64", %d End estimator\n", nb_branching_kmers,
 			estimated_nb_branching_kmers, estimated_NBITS_TERMINATOR);
 	return estimated_nb_branching_kmers;
 //	    fprintf (stderr,"\n");

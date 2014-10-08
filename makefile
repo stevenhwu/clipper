@@ -2,10 +2,13 @@ UNAME := $(shell uname)
 
 CC=g++
 CFLAGS = -O4 -Wall -D_FILE_OFFSET_BITS=64 -std=c++11# needed to handle files > 2 GB on 32 bits systems
+LDFLAGS = -lz
 
 ifeq ($(UNAME), FreeBSD)
 CC=g++48
 CFLAGS += -D_GLIBCXX_USE_C99
+#LDFLAGS= -L/usr/local/lib/gcc48/
+LDFLAGS= -Wl,-rpath,/usr/local/lib/gcc48
 endif
 
 SOURCES=Pool.cpp Bank.cpp Bloom.cpp Hash16.cpp LargeInt.cpp \
@@ -104,30 +107,31 @@ all: $(EXEC)
 
 
 minia: clean $(OBJDIR) $(OBJ) src/Minia.cpp
-	$(CC) -o $@ $(OBJ) src/Minia.cpp $(CFLAGS) -lz
+	$(CC) -o $@ $(OBJ) src/Minia.cpp $(CFLAGS) $(LDFLAGS)
 
 inc: $(OBJ) src/Minia.cpp
-	$(CC) -o minia $(OBJ) src/Minia.cpp $(CFLAGS) -lz
+	$(CC) -o minia $(OBJ) src/Minia.cpp $(CFLAGS) $(LDFLAGS)
 
 clean:
 	@rm -rf $(OBJ) $(TEST_OBJ)
 
 $(OBJDIR):
-	mkdir -p $(OBJDIR) 
+	mkdir -p $(OBJDIR)
+	 
 obj/%.o: src/%.cpp src/%.h test/%.cpp
 	echo "BOTH!!"
 	@$(call make-depend,$<,$@,$(subst .o,.d,$@))
-	$(CC) -o $@ -c $< $(CFLAGS)
+	$(CC) -o $@ -c $< $(CFLAGS) $(LDFLAGS)
 
 obj/%.o: src/%.cpp src/%.h
 #	echo "SRC ONLY" 
 	@$(call make-depend,$<,$@,$(subst .o,.d,$@))
-	$(CC)  -o $@ -c $< $(CFLAGS)
+	$(CC)  -o $@ -c $< $(CFLAGS) $(LDFLAGS)
 
 obj/%.o: test/%.cpp
 #	echo "TEST ONLY"
 	@$(call make-depend,$<,$@,$(subst .o,.d,$@))
-	$(CC) -o $@ -c $< $(CFLAGS)  -I$(CURDIR)/
+	$(CC) -o $@ -c $< $(CFLAGS) $(LDFLAGS)  -I$(CURDIR)/
 
 
 #%Test.o: clean %Test.cpp $(SRP)%.cpp $(SRP)%.h
@@ -153,8 +157,7 @@ debug2: clean $(TEST_OBJ)# %Test.cpp $(SRP)%.cpp $(SRP)%.h
 
 debug: CFLAGS += -g -O0
 debug: buildrepo $(OBJ) src/Minia.cpp
-	$(CC) -o $@_minia $(OBJ) src/Minia.cpp $(CFLAGS)  -lz
-
+	$(CC) -o $@_minia $(OBJ) src/Minia.cpp $(CFLAGS)  $(LDFLAGS)
 
 
 buildrepo:

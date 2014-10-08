@@ -21,7 +21,7 @@ const char *assoc_kmer_file = (char *)"paired_kmer";
 const char *solid_kmers_colour_file = (char *)"solid_kmers_colour_binary";
 const char *assembly_colour_file = (char *)"contigs_colour.fa";
 
-const int print_table_frequency = 1000000; //default 10000
+const unsigned int print_table_frequency = 1000000; //default 10000
 
 
 // prefix-based output files naming 
@@ -121,32 +121,28 @@ void bloom_pass_reads_binary(T *bloom_to_insert, BloomCpt *bloom_counter, char *
 
 template <typename T> // T can be Bloom, BloomCpt or BloomCpt3
 void bloom_pass_reads_binary_partition(T *bloom_to_insert,
-		BloomCpt *bloom_counter, char *solid_kmer_partition_file, char *stderr_message) {
-//  fprintf(stderr,"binary pass read to bloom partition:%s\n",solid_kmer_partition_file);
-printf("binary pass read to bloom partition:%s\n",solid_kmer_partition_file);
-  int64_t NbRead = 0;
-  int64_t NbInsertedKmers = 0;
-  kmer_type kmer;
-  KmerColour kmer_colour;
-  // read solid kmers from disk
-//  BinaryBank * SolidKmers = new BinaryBank(return_file_name(solid_kmers_file),sizeof(kmer),0);
+		BloomCpt *bloom_counter, BinaryBank *solid_kmer_colour , char *stderr_message) {
 
-  BinaryBank *solid_kmer_colour = new BinaryBank(return_file_name(solid_kmer_partition_file),sizeof(kmer_type)+sizeof(KmerColour),0);
+	int64_t NbRead = 0;
+	int64_t NbInsertedKmers = 0;
+	kmer_type kmer;
+	KmerColour kmer_colour;
+
 //  printf("summary:%d %d\n", solid_kmer_colour->nb_elements(), solid_kmer_colour->file_size());
-  while(solid_kmer_colour->read_kmer_colour(&kmer, &kmer_colour))
-    {
-      // printf("kmer %lld\n",kmer);
-      bloom_to_insert->add(kmer);
-      NbInsertedKmers++;
-      NbRead++;
+	while (solid_kmer_colour->read_kmer_colour(&kmer, &kmer_colour)) {
+		bloom_to_insert->add(kmer);
+		NbInsertedKmers++;
+		NbRead++;
 
-      if ((NbRead% print_table_frequency )==0) fprintf (stderr,stderr_message,13,(long long)NbRead);
+		if ((NbRead % print_table_frequency) == 0)
+			fprintf(stderr, stderr_message, 13, (long long) NbRead);
 
-    }
-  fprintf (stderr,"\nInserted %lld %s kmers in the bloom structure.\n",(long long)NbInsertedKmers,"solid");
-  solid_kmer_colour->close();
+	}
+	fprintf(stderr, "\nInserted %lld %s kmers in the bloom structure.\n",
+			(long long) NbInsertedKmers, "solid");
 
 }
+
 int estimated_BL1;
 uint64_t estimated_BL1_freesize;
 
@@ -209,25 +205,14 @@ Bloom *bloom_create_bloo1(T *bloom_counter, bool from_dump)
 template <typename T> //bloocpt or bloocpt3
 Bloom *bloom_create_bloo1_partition(T *bloom_counter, char *solid_kmer_partition_file, bool from_dump)
 {
-//printf("In bloom_create_bloo1_partition: %s\n", solid_kmer_partition_file);
-    BinaryBank * solid_kmer_colour;
-//	solid_kmer_colour->rewind_all();
-//    if(from_dump && nsolids) // from dump and known number of solid kmers
-//    {
-//        //nsolids is sotred in a config file
-//        //number of solid kmers cannot be computed precisely from bloom file, imprecision of 0-7
-//        estimated_BL1 = max( (int)ceilf(log2f(nsolids*NBITS_PER_KMER)), 1);
-//        estimated_BL1_freesize =  (uint64_t)(nsolids*NBITS_PER_KMER);
-//    }
-//    else
-//    {
-        // get true number of solid kmers, in order to precisely size the bloom filter
-    	solid_kmer_colour = new BinaryBank(return_file_name(solid_kmer_partition_file),sizeof(kmer_type)+sizeof(KmerColour),0);
-        estimated_BL1 = max( (int)ceilf(log2f(solid_kmer_colour->nb_elements()*NBITS_PER_KMER)), 1);
-        estimated_BL1_freesize =  (uint64_t)(solid_kmer_colour->nb_elements()*NBITS_PER_KMER);
-        printf("nelem %lli nbits %g \n",(long long)(solid_kmer_colour->nb_elements()),NBITS_PER_KMER);
-//    }
 
+
+	BinaryBank solid_kmer_colour(return_file_name(solid_kmer_partition_file),sizeof(kmer_type)+sizeof(KmerColour),0);
+	estimated_BL1 = max( (int)ceilf(log2f(solid_kmer_colour.nb_elements()*NBITS_PER_KMER)), 1);
+	estimated_BL1_freesize =  (uint64_t)(solid_kmer_colour.nb_elements()*NBITS_PER_KMER);
+	printf("nelem %lli nbits %g \n",(long long)(solid_kmer_colour.nb_elements()),NBITS_PER_KMER);
+
+//	delete solid_kmer_colour;
     //printf("Allocating %0.1f MB of memory for the main Bloom structure (%g bits/kmer)\n",(1LL<<estimated_BL1)/1024.0/1024.0/8.0,NBITS_PER_KMER);
     if(estimated_BL1_freesize ==0) estimated_BL1_freesize =10;
 
@@ -247,12 +232,12 @@ sprintf(tempfile, "%s_%s", solid_kmer_partition_file,bloom_file);
         bloo1->load(return_file_name(tempfile)); // just load the dump
     else
     {
-        bloom_pass_reads_binary_partition(bloo1, bloom_counter, solid_kmer_partition_file, (char*)"%cInsert solid Kmers in Bloom %lld"); // use the method reading SolidKmers binary file, was useful when varying Bloom size (!= dumped size)
-        //bloo1->dump(return_file_name(bloom_file)); // create bloom dump
-        solid_kmer_colour->close();
-
-    	bloo1-> dump(return_file_name(tempfile));
+		bloom_pass_reads_binary_partition(bloo1, bloom_counter,
+				&solid_kmer_colour,
+				(char*) "%cInsert solid Kmers in Bloom %lld"); // use the method reading SolidKmers binary file, was useful when varying Bloom size (!= dumped size)
+		bloo1-> dump(return_file_name(tempfile));
     }
+    solid_kmer_colour.close();
     return bloo1;
 }
 
@@ -534,12 +519,13 @@ uint64_t extrapolate_distinct_kmers_wrapped(unsigned long nbytes_memory, Bank *R
             }
         }
         NbRead++;
-        if ((NbRead%10000)==0) fprintf (stderr,(char*)"%cExtrapolating number of distinct kmers %lld",13,NbRead);
+        if ((NbRead%10000)==0)
+        	fprintf (stderr,(char*)"%cExtrapolating number of distinct kmers %" PRId64"",13,NbRead);
     }
 
     if (!linearCounter->is_accurate())
     {
-        printf("Inaccurate estimation, restarting with %d MB RAM\n",(2*nbytes_memory)/1024/1024);
+        printf("Inaccurate estimation, restarting with %lu MB RAM\n",(2*nbytes_memory)/1024/1024);
         delete linearCounter;
         return extrapolate_distinct_kmers_wrapped(2*nbytes_memory, Reads);
     }
@@ -663,7 +649,7 @@ void Progress::finish()
 void Progress::finish_threaded()// called by only one of the threads
 {
     done = 0;
-    double rem = 0;
+
     for (int ii=0; ii<16;ii++) done += (done_threaded[ii] ); 
     for (int ii=0; ii<16;ii++) partial += (partial_threaded[ii] ); 
 
@@ -711,7 +697,7 @@ void Progress::inc(uint64_t ntasks_done)
     done += ntasks_done;
     partial += ntasks_done;
 
-    printf("todo:%d done:%d ntask%lu\n", todo, done, ntasks_done);
+    printf("todo:%" PRIu64" done:%" PRIu64" ntask %" PRIu64"\n", todo, done, ntasks_done);
     while(partial >= steps)
     {
         if(timer_mode)

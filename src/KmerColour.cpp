@@ -370,6 +370,7 @@ KmerColourSummary::~KmerColourSummary(){
 	for (int i = 0; i < max_colour; ++i) {
 		delete[] matrix[i];
 	}
+	delete[] matrix;
 //	delete &colour_count;
 //	delete &delta_colour_count;
 //	delete &colour_code;//	std::string colour_code;

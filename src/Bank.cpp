@@ -137,8 +137,12 @@ void Bank::rewind_all()
             gzclose(buffered_file[i]->stream);
             buffered_file[i]->stream = NULL;
         }
-        buffered_file[i]->last_char = buffered_file[i]->eof = buffered_file[i]->buffer_start = buffered_file[i]->buffer_end = 0;
-    }
+		buffered_file[i]->last_char = 0;
+		buffered_file[i]->eof = 0;
+		buffered_file[i]->buffer_start = 0;
+		buffered_file[i]->buffer_end = 0;
+
+	}
     index_file = 0;
     open_stream(index_file);
 }
@@ -548,7 +552,7 @@ int Bank::estimate_max_readlen()
     int readlen;
     rewind_all();
     int max_readlen = 0;
-    uint64_t volume = 0;
+//    uint64_t volume = 0;
 
     index_file = 0;
     
@@ -1138,8 +1142,8 @@ int KmersBuffer::readkmers()
             // binSeq_extended = beginning of the sequence,
             //  cpt_binSeq_read = how much we have already read in this sequence (when kmers_buffer is full, we can halt parsing kmers (see below) in the middle of a sequence, so this value is not necessarily 0)
             char *seq = binSeq_extended+cpt_binSeq_read;  
-            kmer_type graine;
-            kmer_type graine_revcomp;
+            kmer_type graine = 0;
+            kmer_type graine_revcomp = 0;
             if( binSeq_toread  > cpt_binSeq_read)
                 // there are still unread kmers in this sequence, here we read the first one,
                 // we put it in graine / graine_revcomp  and store it in the kmers_buffer

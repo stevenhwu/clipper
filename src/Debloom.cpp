@@ -163,11 +163,11 @@ int debloom(int order, int max_memory)
             }
         }
         NbSolidKmer++;
-        if ((NbSolidKmer%print_table_frequency)==0) fprintf (stderr,"%c Writing positive Bloom Kmers %lld",13,NbSolidKmer);
+        if ((NbSolidKmer%print_table_frequency)==0) fprintf (stderr,"%c Writing positive Bloom Kmers %" PRId64 "",13,NbSolidKmer);
     }
     nbkmers_solid =  NbSolidKmer; // GUS: it's global now
 
-    fprintf(stderr,"\n%lli kmers written\n",cc);
+    fprintf(stderr,"\n%" PRId64 " kmers written\n",cc);
 
     STOPWALL(pos,"Write all positive kmers");
 
@@ -201,11 +201,11 @@ int debloom(int order, int max_memory)
         hasht1->add(kmer);
 
         NbSolidKmer++;
-        if ((NbSolidKmer%print_table_frequency)==0) fprintf (stderr,"%cBuild Hash table %lld",13,NbSolidKmer);
+        if ((NbSolidKmer%print_table_frequency)==0) fprintf (stderr,"%cBuild Hash table %" PRId64 "",13,NbSolidKmer);
 
         if(hasht1->nb_elem >max_kmer_per_part) //end partition,  find false positives
         {
-            fprintf(stderr,"End of debloom partition  %lli / %lld \n",hasht1->nb_elem,max_kmer_per_part);
+            fprintf(stderr,"End of debloom partition  %" PRId64 " / %" PRId64 " \n",hasht1->nb_elem,max_kmer_per_part);
 
             end_debloom_partition(false);
 
@@ -218,14 +218,14 @@ int debloom(int order, int max_memory)
             //reset hash table
             hasht1->empty_all();
 
-            fprintf(stderr,"\n%lli false positives written , partition %i \n",n_false_positives,numpart);
+            fprintf(stderr,"\n%" PRId64 " false positives written , partition %i \n",n_false_positives,numpart);
 
             numpart++;
         } ///end partition
 
 
     }
-    fprintf(stderr,"Nb kmers stored in the bloom table %lld\n",nbkmers_solid);
+    fprintf(stderr,"Nb kmers stored in the bloom table %" PRId64 "\n",nbkmers_solid);
 
 
     ///////////////////////// last partition, will write all the FP's to the good file
@@ -235,7 +235,7 @@ int debloom(int order, int max_memory)
     /////////end write files
 
 
-    fprintf(stderr,"Total nb false positives stored in the Debloom hashtable %lli \n",n_false_positives);
+    fprintf(stderr,"Total nb false positives stored in the Debloom hashtable %" PRId64 " \n",n_false_positives);
 
     delete hasht1;
 
@@ -291,11 +291,11 @@ Set *load_false_positives()
 
         NbInsertedKmers++;
 
-        if ((NbInsertedKmers%print_table_frequency)==0) fprintf (stderr,(char*)"%cInsert false positive Kmers in hash table %lld",13,NbInsertedKmers);
+        if ((NbInsertedKmers%print_table_frequency)==0) fprintf (stderr,(char*)"%cInsert false positive Kmers in hash table %" PRId64 "",13,NbInsertedKmers);
     }
     fp->finalize(); // always call this when finishing to create a FPSet
 
-    fprintf (stderr,"\nInserted %lld false positive kmers in the hash structure.\n\n",NbInsertedKmers);
+    fprintf (stderr,"\nInserted %" PRId64 " false positive kmers in the hash structure.\n\n",NbInsertedKmers);
 
     print_size_summary(fp);
 
@@ -354,12 +354,12 @@ if (nbkmers_solid==0){
     
     NbInsertedKmers++;
     if ((NbInsertedKmers%print_table_frequency)==0)
-      fprintf (stderr,"%cInsert false positive B2 %lld",13,NbInsertedKmers);
+      fprintf (stderr,"%cInsert false positive B2 %" PRId64 "",13,NbInsertedKmers);
   }
-  fprintf (stderr,"%cInsert false positive B2 %lld", 13,NbInsertedKmers);
+  fprintf (stderr,"%cInsert false positive B2 %" PRId64 "", 13,NbInsertedKmers);
   FalsePositives->close();
 
-  printf("\nInserted %lld (estimated, %lld) kmers in B2.\n", NbInsertedKmers, nbFP);
+  printf("\nInserted %" PRId64 " (estimated, %" PRId64 ") kmers in B2.\n", NbInsertedKmers, nbFP);
 
 
   //  **** Insert false positives in B3 and write T2 
@@ -383,12 +383,12 @@ if (nbkmers_solid==0){
 
     NbInsertedKmers++;
     if ((NbInsertedKmers% print_table_frequency)==0)
-      fprintf (stderr,(char*)"%cInsert false positive B3 %lld",13,NbInsertedKmers);
+      fprintf (stderr,(char*)"%cInsert false positive B3 %" PRId64 "",13,NbInsertedKmers);
   }
-  fprintf (stderr,(char*)"%cInsert false positive B3 %lld",13,NbInsertedKmers);
+  fprintf (stderr,(char*)"%cInsert false positive B3 %" PRId64 "",13,NbInsertedKmers);
   SolidKmers->close();
 
-  printf("\nInserted %lld (estimated, %llu) kmers in B3.\n", addKmers, estimated_T2_size);
+  printf("\nInserted %d (estimated, %" PRId64") kmers in B3.\n", addKmers, estimated_T2_size);
 
   
   // **** Insert false positives in B4 (we could write T3, but it's not necessary)
@@ -407,12 +407,12 @@ if (nbkmers_solid==0){
 
     NbInsertedKmers++;
     if ((NbInsertedKmers%print_table_frequency)==0)
-      fprintf (stderr,"%cInsert false positive B4 %lld",13,NbInsertedKmers);
+      fprintf (stderr,"%cInsert false positive B4 %" PRId64 "",13,NbInsertedKmers);
   }
-  fprintf (stderr,"%cInsert false positive B4 %lld", 13,NbInsertedKmers);
+  fprintf (stderr,"%cInsert false positive B4 %" PRId64 "", 13,NbInsertedKmers);
   FalsePositives->close();
 
-  printf("\nInserted %lld (estimated, %lld) kmers in B4.\n", addKmers, estimated_T3_size);
+  printf("\nInserted %d (estimated, %" PRId64 ") kmers in B4.\n", addKmers, estimated_T3_size);
   
 
   // **** Count and insert false positives in T4
@@ -436,13 +436,13 @@ if (nbkmers_solid==0){
 
     NbInsertedKmers++;
     if ((NbInsertedKmers%print_table_frequency)==0)
-      fprintf (stderr,"%cInsert false positive T4 %lld",13,NbInsertedKmers);
+      fprintf (stderr,"%cInsert false positive T4 %" PRId64 "",13,NbInsertedKmers);
   }
   fp->false_positives->finalize();
-  fprintf (stderr,"%cInsert false positive T4 %lld", 13,NbInsertedKmers);
+  fprintf (stderr,"%cInsert false positive T4 %" PRId64 "", 13,NbInsertedKmers);
   fclose(T2_file);
 
-  printf("\nInserted %lld (estimated, %lld) kmers in T4.\n\n", addKmers, (uint64_t)fp->false_positives->capacity());
+  printf("\nInserted %d (estimated, %" PRId64 ") kmers in T4.\n\n", addKmers, (uint64_t)fp->false_positives->capacity());
 
   uint64_t total_size = get_FPSetCascading4_size(fp);
   fp->set_total_memory(total_size);
@@ -461,10 +461,10 @@ void print_size_summary(FPSet *fp)
 
   fprintf(stderr,"Size of the Bloom table  : %.2lf MB\n", bits_to_MB(size_B1) );
   fprintf(stderr,"                           %.2lf bits / solid kmer\n", b1_size/(double)(nbkmers_solid) );  
-  fprintf(stderr, "Size of the FP table     : %lli FP x %d bits =  %.2lf MB  \n", fp->capacity(), bits_per_FP_element, bits_to_MB((double)(size_T1)) );
+  fprintf(stderr, "Size of the FP table     : %" PRId64 " FP x %d bits =  %.2lf MB  \n", fp->capacity(), bits_per_FP_element, bits_to_MB((double)(size_T1)) );
   fprintf(stderr,"                                      actual implementation : %.2lf bits / solid kmer\n", size_T1/(double)nbkmers_solid);
   fprintf(stderr,"  assuming list of kmers, i.e. sizeof(kmer_type) bits / FP : %.2lf bits / solid kmer \n\n",(fp->capacity()*sizeof(kmer_type)*8LL)/(double)(nbkmers_solid));
-  fprintf(stderr,"      Total %.2lf MB for %lld solid kmers  ==>  %.2lf bits / solid kmer\n\n", bits_to_MB(total_size), nbkmers_solid, total_size / nbkmers_solid);
+  fprintf(stderr,"      Total %.2lf MB for %" PRId64 " solid kmers  ==>  %.2lf bits / solid kmer\n\n", bits_to_MB(total_size), nbkmers_solid, total_size / nbkmers_solid);
 }
 
 void print_size_summary(FPSetCascading4 *fp)
@@ -476,12 +476,12 @@ void print_size_summary(FPSetCascading4 *fp)
     size_T4 = fp->false_positives->capacity() * FPSet::bits_per_element;
   double total_size = (double)(size_B1 + size_B2 + size_B3 + size_B4 + size_T4);
 
-  fprintf(stderr,"Size of the Bloom table (B1)  : %.2lf MB  %llu\n", bits_to_MB((double)size_B1), size_B1);
-  fprintf(stderr,"Size of the Bloom table (B2)  : %.2lf MB  %llu\n", bits_to_MB((double)size_B2), size_B2);
-  fprintf(stderr,"Size of the Bloom table (B3)  : %.2lf MB  %llu\n", bits_to_MB((double)size_B3), size_B3);
-  fprintf(stderr,"Size of the Bloom table (B4)  : %.2lf MB  %llu\n", bits_to_MB((double)size_B4), size_B4);
-  fprintf(stderr,"Size of the FP table (T4)     : %.2lf MB  %llu\n", bits_to_MB((double)size_T4), size_T4);
-  fprintf(stderr,"      Total %.2lf MB for %lld solid kmers  ==>  %.2lf bits / solid kmer\n\n", bits_to_MB(total_size), nbkmers_solid, total_size / nbkmers_solid);
+  fprintf(stderr,"Size of the Bloom table (B1)  : %.2lf MB  %" PRId64 "\n", bits_to_MB((double)size_B1), size_B1);
+  fprintf(stderr,"Size of the Bloom table (B2)  : %.2lf MB  %" PRId64 "\n", bits_to_MB((double)size_B2), size_B2);
+  fprintf(stderr,"Size of the Bloom table (B3)  : %.2lf MB  %" PRId64 "\n", bits_to_MB((double)size_B3), size_B3);
+  fprintf(stderr,"Size of the Bloom table (B4)  : %.2lf MB  %" PRId64 "\n", bits_to_MB((double)size_B4), size_B4);
+  fprintf(stderr,"Size of the FP table (T4)     : %.2lf MB  %" PRId64 "\n", bits_to_MB((double)size_T4), size_T4);
+  fprintf(stderr,"      Total %.2lf MB for %" PRId64 " solid kmers  ==>  %.2lf bits / solid kmer\n\n", bits_to_MB(total_size), nbkmers_solid, total_size / nbkmers_solid);
 }
 
 uint64_t get_FPSetCascading4_size (FPSetCascading4 *fp)
@@ -496,7 +496,7 @@ uint64_t get_FPSetCascading4_size (FPSetCascading4 *fp)
 }
 
 
-int debloom_partition(char *solid_kmer_partition_file, int max_memory)
+int DebloomUtils::debloom_partition(char *solid_kmer_partition_file, int max_memory)
 {//ONLY work for order ==0 now.
     // read bloo1 from disk dump
 
@@ -546,11 +546,11 @@ int debloom_partition(char *solid_kmer_partition_file, int max_memory)
             }
         }
         NbSolidKmer++;
-        if ((NbSolidKmer%print_table_frequency)==0) fprintf (stderr,"%c Writing positive Bloom Kmers %lld",13,NbSolidKmer);
+        if ((NbSolidKmer%print_table_frequency)==0) fprintf (stderr,"%c Writing positive Bloom Kmers %" PRId64 "",13,NbSolidKmer);
     }
     nbkmers_solid =  NbSolidKmer; // GUS: it's global now
 
-    fprintf(stderr,"\n%lli kmers written. All possible %lli\n",cc, cc2);
+    fprintf(stderr,"\n%" PRId64 " kmers written. All possible %" PRId64 "\n",cc, cc2);
 
     STOPWALL(pos,"Write all positive kmers");
 
@@ -585,11 +585,11 @@ int debloom_partition(char *solid_kmer_partition_file, int max_memory)
         hasht1->add(kmer);
 
         NbSolidKmer++;
-        if ((NbSolidKmer%print_table_frequency)==0) fprintf (stderr,"%cBuild Hash table %lld",13,NbSolidKmer);
+        if ((NbSolidKmer%print_table_frequency)==0) fprintf (stderr,"%cBuild Hash table %" PRId64 "",13,NbSolidKmer);
 
         if(hasht1->nb_elem >max_kmer_per_part) //end partition,  find false positives
         {
-            fprintf(stderr,"End of debloom partition  %lli / %lld \n",hasht1->nb_elem,max_kmer_per_part);
+            fprintf(stderr,"End of debloom partition  %" PRId64 " / %" PRId64 " \n",hasht1->nb_elem,max_kmer_per_part);
 
             end_debloom_partition_multi_files(false, solid_kmer_partition_file);
 
@@ -602,14 +602,14 @@ int debloom_partition(char *solid_kmer_partition_file, int max_memory)
             //reset hash table
             hasht1->empty_all();
 
-            fprintf(stderr,"\n%lli false positives written , partition %i \n",n_false_positives,numpart);
+            fprintf(stderr,"\n%" PRId64 " false positives written , partition %i \n",n_false_positives,numpart);
 
             numpart++;
         } ///end partition
 
 
     }
-    fprintf(stderr,"Nb kmers stored in the bloom table %lld\n",nbkmers_solid);
+    fprintf(stderr,"Nb kmers stored in the bloom table %" PRId64 "\n",nbkmers_solid);
 
 
     ///////////////////////// last partition, will write all the FP's to the good file
@@ -620,7 +620,7 @@ int debloom_partition(char *solid_kmer_partition_file, int max_memory)
     /////////end write files
 
 
-    fprintf(stderr,"Total nb false positives stored in the Debloom hashtable %lli \n",n_false_positives);
+    fprintf(stderr,"Total nb false positives stored in the Debloom hashtable %" PRId64 " \n",n_false_positives);
 
     delete hasht1;
 
@@ -633,13 +633,13 @@ int debloom_partition(char *solid_kmer_partition_file, int max_memory)
     fclose(debloom_file);
     fclose(debloom_file_2);
     solid_kmer_colour->close();
-
+    delete solid_kmer_colour;
 
     return 1;
 
 }
 
-void end_debloom_partition_multi_files(bool last_partition, char* solid_kmer_partition_file)
+void DebloomUtils::end_debloom_partition_multi_files(bool last_partition, char* solid_kmer_partition_file)
 {
 
     int value;
@@ -704,10 +704,11 @@ void end_debloom_partition_multi_files(bool last_partition, char* solid_kmer_par
     if (last_partition){
         fclose(file_false_positive_kmers);
     	file_false_positive_kmers_binary->close();
+    	delete file_false_positive_kmers_binary;
     }
 }
 
-Set *load_false_positives_cascading4_partition(char* solid_kmer_partition_file)
+Set *DebloomUtils::load_false_positives_cascading4_partition(char* solid_kmer_partition_file)
 {
 
 if (nbkmers_solid==0){
@@ -716,6 +717,7 @@ if (nbkmers_solid==0){
 			sizeof(kmer_type) + sizeof(KmerColour), 0);
 	nbkmers_solid = solid_kmer_colour->nb_elements();
 	solid_kmer_colour->close();
+	delete solid_kmer_colour;
 //	b1_size = 20239964;
 //	uint64_t estimated_BL1_freesize =  (uint64_t)(nbkmers_solid*NBITS_PER_KMER);
 
@@ -768,6 +770,7 @@ if (nbkmers_solid==0){
 
 
   // **** Insert the false positives in B2 ****
+
   NbInsertedKmers = 0;
   while (FalsePositives->get_next_seq(&rseq,&readlen))
   {
@@ -777,12 +780,12 @@ if (nbkmers_solid==0){
 
     NbInsertedKmers++;
     if ((NbInsertedKmers%print_table_frequency)==0)
-      fprintf (stderr,"%cInsert false positive B2 %lld",13,NbInsertedKmers);
+      fprintf (stderr,"%cInsert false positive B2 %" PRId64 "",13,NbInsertedKmers);
   }
-  fprintf (stderr,"%cInsert false positive B2 %lld", 13,NbInsertedKmers);
+  fprintf (stderr,"%cInsert false positive B2 %" PRId64 "", 13,NbInsertedKmers);
   FalsePositives->close();
-
-  printf("\nInserted %lld (estimated, %lld) kmers in B2.\n", NbInsertedKmers, nbFP);
+  delete FalsePositives;
+  printf("\nInserted %" PRId64 " (estimated, %" PRIu64 ") kmers in B2.\n", NbInsertedKmers, nbFP);
 
 
   //  **** Insert false positives in B3 and write T2
@@ -810,16 +813,17 @@ if (nbkmers_solid==0){
 
     NbInsertedKmers++;
     if ((NbInsertedKmers% print_table_frequency)==0)
-      fprintf (stderr,(char*)"%cInsert false positive B3 %lld",13,NbInsertedKmers);
+      fprintf (stderr,(char*)"%cInsert false positive B3 %" PRId64 "",13,NbInsertedKmers);
   }
-  fprintf (stderr,(char*)"%cInsert false positive B3 %lld",13,NbInsertedKmers);
+  fprintf (stderr,(char*)"%cInsert false positive B3 %" PRId64 "",13,NbInsertedKmers);
   solid_kmer_colour->close();
-
-  printf("\nInserted %lld (estimated, %llu) kmers in B3.\n", addKmers, estimated_T2_size);
+  delete solid_kmer_colour;
+  printf("\nInserted %d (estimated, %" PRIu64") kmers in B3.\n", addKmers, estimated_T2_size);
 
 
   // **** Insert false positives in B4 (we could write T3, but it's not necessary)
   FalsePositives = new Bank(return_file_name(temp_file));
+//  FalsePositives->rewind_all(); //Trade space/time?
   NbInsertedKmers = 0;
   addKmers = 0;
   while (FalsePositives->get_next_seq(&rseq,&readlen))
@@ -834,12 +838,13 @@ if (nbkmers_solid==0){
 
     NbInsertedKmers++;
     if ((NbInsertedKmers%print_table_frequency)==0)
-      fprintf (stderr,"%cInsert false positive B4 %lld",13,NbInsertedKmers);
+      fprintf (stderr,"%cInsert false positive B4 %" PRId64 "",13,NbInsertedKmers);
   }
-  fprintf (stderr,"%cInsert false positive B4 %lld", 13,NbInsertedKmers);
+  fprintf (stderr,"%cInsert false positive B4 %" PRId64 "", 13,NbInsertedKmers);
   FalsePositives->close();
+  delete FalsePositives;
 
-  printf("\nInserted %lld (estimated, %lld) kmers in B4.\n", addKmers, estimated_T3_size);
+  printf("\nInserted %d (estimated, %" PRIu64 ") kmers in B4.\n", addKmers, estimated_T3_size);
 
 
   // **** Count and insert false positives in T4
@@ -864,13 +869,13 @@ if (nbkmers_solid==0){
 
     NbInsertedKmers++;
     if ((NbInsertedKmers%print_table_frequency)==0)
-      fprintf (stderr,"%cInsert false positive T4 %lld",13,NbInsertedKmers);
+      fprintf (stderr,"%cInsert false positive T4 %" PRId64 "",13,NbInsertedKmers);
   }
   fp->false_positives->finalize();
-  fprintf (stderr,"%cInsert false positive T4 %lld", 13,NbInsertedKmers);
+  fprintf (stderr,"%cInsert false positive T4 %" PRId64 "", 13,NbInsertedKmers);
   fclose(T2_file);
 
-  printf("\nInserted %lld (estimated, %lld) kmers in T4.\n\n", addKmers, (uint64_t)fp->false_positives->capacity());
+  printf("\nInserted %d (estimated, %" PRIu64 ") kmers in T4.\n\n", addKmers, (uint64_t)fp->false_positives->capacity());
 
   uint64_t total_size = get_FPSetCascading4_size(fp);
   fp->set_total_memory(total_size);

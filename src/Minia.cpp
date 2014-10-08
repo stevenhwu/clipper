@@ -330,7 +330,7 @@ inline void assemble_partition(char *solid_kmer_partition_file)
 //	KmerColour *contig_colour   = (KmerColour *) calloc(2*(maxlen+sizeKmer), sizeof(KmerColour));
     MemoryMonitor::printValue("after malloc"); //malloc take up to ~80,000kb
     kmer_type kmer;
-    KmerColour kmer_colour;
+//    KmerColour kmer_colour;
 
     long long nbContig =0;
     long long totalnt=0;
@@ -356,13 +356,13 @@ inline void assemble_partition(char *solid_kmer_partition_file)
     Bloom* bloom = bloom_create_bloo1_partition((BloomCpt *) NULL,
     		solid_kmer_partition_file, false);
     MemoryMonitor::printValue("after bloom");
-    	debloom_partition(solid_kmer_partition_file, max_memory);
-    	MemoryMonitor::printValue("after create debloom, sholud be the same as above");
+    DebloomUtils::debloom_partition(solid_kmer_partition_file, max_memory);
+	MemoryMonitor::printValue("after create debloom, sholud be the same as above");
     //	estimated_BL1_freesize =  (uint64_t)(solid_kmer_colour->nb_elements()*NBITS_PER_KMER);
     	//size estimating of bloom
 
-    	Set* false_positives = load_false_positives_cascading4_partition(
-    			solid_kmer_partition_file);
+	Set* false_positives = DebloomUtils::load_false_positives_cascading4_partition(
+			solid_kmer_partition_file);
 
     	MemoryMonitor::printValue("after FP");
     STARTWALL(assembly);
@@ -648,7 +648,7 @@ void divided_solid_kmer_colour_into_partitions(int nb_partitions, char solid_kme
     }
 	solid_kmers_colour->close();
 	delete solid_kmers_colour;
-	long int total2 = 0;
+	int total2 = 0;
 	for (int p=0;p<nb_partitions;p++) {
 		printf("Size for p%d:%ld\n",p, distinct_kmers_per_partition[p]);
 		total2 += distinct_kmers_per_partition[p];
@@ -664,6 +664,7 @@ void test_partitions(int nb_partitions, char solid_kmer_partition_file[][Utils::
 	for (int p=0;p<nb_partitions;p++) {
 		assemble_partition(solid_kmer_partition_file[p]);
 		MemoryMonitor::printValue("End each partition");
+		exit(-1);
 	}
 	MemoryMonitor::printValue("End Partition");
 }
@@ -679,7 +680,6 @@ void test_memory_partitions(int nb_partitions, char solid_kmer_partition_file[][
 	}
 	printf("Summary memory usage for all partitions:\n");
 	for (int p=0;p<nb_partitions;p++) {
-
 		printf("P%d: %lu %.3fKB %.2fMB\n", p, memory[p], bits_to_KB(memory[p]), bits_to_MB(memory[p]));
 	}
 
@@ -687,8 +687,20 @@ void test_memory_partitions(int nb_partitions, char solid_kmer_partition_file[][
 
 int main(int argc, char *argv[])
 {
+#ifdef OSX
+printf("OSX:\n");
+#elif defined(__FreeBSD__)
+printf("FreeBSD\n");
+#elif defined(__linux__) || defined(__linux) || defined(linux) || defined(__gnu_linux__)
+printf("Linux\n");
+#elif defined(__unix__) || defined(__unix) || defined(unix) || (defined(__APPLE__) && defined(__MACH__))
+printf("Some unix/apple");
+#else
+printf("Nothing??:\n");
+#endif
 
 	MemoryMonitor::printValue("Init");
+//	exit(-1);
     if(argc <  6)
     {
         fprintf (stderr,"usage:\n");
@@ -806,7 +818,7 @@ int main(int argc, char *argv[])
 
 
 
-    fprintf (stderr,"taille cell %zu \n", sizeof(cell<kmer_type>));
+//    fprintf (stderr,"taille cell %zu \n", sizeof(cell<kmer_type>));
 
 //    max_memory = 1000;
 //    max_disk_space = 10;
@@ -827,20 +839,12 @@ int main(int argc, char *argv[])
 
 	Bank *ReadsTest = new Bank(argv[1]);
 	SortingCountPartitions::sorting_count_partitions(ReadsTest, solid_kmer_partition_file, max_memory, max_disk_space, nb_splits);
-//	MemoryMonitor::printValue("after counting");
-//	ReadsTest->close();
 	delete ReadsTest;
 
-//	exit(-1);
-for (int i = 0; i < 1; ++i) {
 
-
-	test_memory_partitions(nb_splits, solid_kmer_partition_file);
-	MemoryMonitor::printValue("after test memory: ");
-
-}
-	exit(-1);
+//	test_memory_partitions(nb_splits, solid_kmer_partition_file);
 //	test_memory_partitions_using_number_only(nb_splits, solid_kmer_partition_file);
+
 	test_partitions(nb_splits, solid_kmer_partition_file);
 
 exit(-1);

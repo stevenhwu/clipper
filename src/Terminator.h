@@ -78,7 +78,7 @@ public:
   bool is_marked(kmer_type graine);
   bool is_marked_branching(kmer_type graine);
   bool next(kmer_type *kmer);
-    int64_t nb_branching_kmers;
+    uint64_t nb_branching_kmers;
     void dump_branching_kmers(BinaryBank *BranchingKmers);
     void reset();
 

@@ -79,8 +79,10 @@ template<typename T> Bloom *bloom_create_bloo1_partition(T *bloom_counter,char *
 
 template<typename T>void bloom_pass_reads_binary(T *bloom_to_insert,BloomCpt *bloom_counter,char *stderr_message);
 
+//template<typename T>void bloom_pass_reads_binary_partition(T *bloom_to_insert,
+//		BloomCpt *bloom_counter, char *solid_kmer_partition_file, char *stderr_message);
 template<typename T>void bloom_pass_reads_binary_partition(T *bloom_to_insert,
-		BloomCpt *bloom_counter, char *solid_kmer_partition_file, char *stderr_message);
+		BloomCpt *bloom_counter, BinaryBank *solid_kmer_colour, char *stderr_message);
 
 
 template<typename T,typename U>void bloom_pass_reads(Bank *Sequences,T *bloom_to_insert,U *bloom_counter,char *stderr_message);
@@ -88,7 +90,7 @@ template<typename T,typename U>void bloom_pass_reads(Bank *Sequences,T *bloom_to
 
 float needleman_wunch(string a, string b);
 
-extern const int print_table_frequency;
+extern const unsigned int print_table_frequency;
 
 class Progress
 {

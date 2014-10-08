@@ -13,6 +13,9 @@
 #include "Terminator.h"
 #include "Traversal.h"
 #include "Debloom.h"
+#include <cstdint>
+#include <string>
+
 
 double bits_to_MB(double bits);
 double bits_to_KB(double bits);
@@ -25,7 +28,7 @@ private:
 
 public:
 	static int getValue();
-	static void printValue(char* message = "");
+	static void printValue(const std::string message = "");
 
 	static size_t getPeakRSS( );
 	static size_t getCurrentRSS( );

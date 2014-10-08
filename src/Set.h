@@ -36,8 +36,8 @@ public:
     virtual void insert(set_elem elem) = 0;
     virtual void finalize() = 0;
     virtual bool contains(set_elem elemn) = 0;
-    virtual uint64_t get_total_memory(){};
-    virtual void set_total_memory(uint64_t memory){};
+    virtual uint64_t get_total_memory(){return total_memory;}
+    virtual void set_total_memory(uint64_t memory){}
     virtual ~Set(){};
 };
 
@@ -72,6 +72,7 @@ class ListSet : public Set{
 
     ListSet(uint64_t taille_approx);
     ListSet();
+    ~ListSet();
 
 };
 
@@ -152,6 +153,8 @@ class FPSetCascading4 : public Set{
   bool is_false_positive(set_elem elemn);
   uint64_t get_total_memory();
   void set_total_memory(uint64_t memory);
+
+  ~FPSetCascading4();
 };
 
 #endif

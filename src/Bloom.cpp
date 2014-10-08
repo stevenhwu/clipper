@@ -256,10 +256,9 @@ void Bloom::load(char * filename)
 {
  FILE *file_data;
  file_data = fopen(filename,"rb");
- printf("loading bloom filter from file\n");
+// printf("loading bloom filter from file\n");
  fread(blooma, sizeof(unsigned char), nchar, file_data);
- printf("bloom loaded\n");
-
+ fclose(file_data);
 
 }
 

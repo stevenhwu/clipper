@@ -47,7 +47,7 @@ bool output_histo;
 //           - the very first four bytes of the result file are the kmer length
 void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_space, bool write_count, int verbose, bool skip_binary_conversion)
 {
-int first =1;
+
 
     // create a temp dir from the prefix
     char temp_dir[1024];
@@ -108,7 +108,7 @@ int first =1;
         volume_per_pass = volume / nb_passes;
         nb_partitions = ( volume_per_pass / max_memory ) + 1;
         if(verbose){
-        	printf("Initial estimation. volume:%llu nb_passes:%lu Volume_per_pass:%llu nb_partitions:%lu\n",
+        	printf("Initial estimation. volume:%lu nb_passes:%u Volume_per_pass:%lu nb_partitions:%u\n",
         			volume, nb_passes, volume_per_pass, nb_partitions
         			);
         }
@@ -131,11 +131,10 @@ int first =1;
 
         // get max number of open files
         struct rlimit lim;
-        int max_open_files = 1000;
+        unsigned int max_open_files = 1000;
         int err = getrlimit(RLIMIT_NOFILE, &lim);
         if (err == 0)
             max_open_files = lim.rlim_cur / 2;
-        printf("Change nb_passes:%d %d\n",err, max_open_files);
         if (nb_partitions >= max_open_files)
         {
             if (verbose)
@@ -183,7 +182,7 @@ int first =1;
         SolidKmers->write_buffered(&sizeKmer, 4,0);
         SolidKmers->flush(0);
     }
-    int64_t estimated_NbReads = Sequences->estimate_nb_reads();
+//    int64_t estimated_NbReads = Sequences->estimate_nb_reads();
     char * rseq;
     int readlen;
     KmerColour read_colour;
@@ -342,7 +341,7 @@ int first =1;
             int64_t  nbkmers_written =0;
             int tid =0;
             int64_t NbRead = 0;
-            int64_t nread =0;
+//            int64_t nread =0;
             int64_t tempread =0;
 #if OMP
 
@@ -468,7 +467,6 @@ int first =1;
 #endif
                 }
             } //end while
-            printf("kmer/type/colour_sizeof:%d\t%d\t%d\n", sizeof(kmer), sizeof(kmer_type), kSizeOfKmerColour);
 //            if(use_compressed_reads)
 //                delete kbuff;
         } // end OMP 
@@ -528,7 +526,7 @@ int first =1;
 #endif        
 
         // load, sort each partition to output solid kmers
-        for (int p=0;p<nb_partitions;p++)
+        for (uint p=0;p<nb_partitions;p++)
         {
             kmer_type lkmer;
             KmerColour lkmer_colour;
@@ -547,7 +545,7 @@ int first =1;
 #if OMP
             tid = omp_get_thread_num();
 #endif
-first = 1;
+
 //            if (use_hashing_for_this_partition)//ALWAYS
             {
                 // hash partition and save to solid file
@@ -582,7 +580,7 @@ first = 1;
                 
                 //single bar
                 
-first = 1;
+
                 if (verbose >= 2)
                     printf("Pass %d/%d partition %d/%d hash load factor: %0.3f\n",current_pass+1,nb_passes,p+1,nb_partitions,hash.load_factor());
                 int counter = 0;
@@ -598,7 +596,7 @@ first = 1;
 #if OMP
                         histo_count_omp[tid][saturated_abundance]++;
 #else
-                        printf("histo_count 0 1  2 %i %i %i \n",histo_count[0],histo_count[1],histo_count[2]);
+                        printf("histo_count 0 1  2 %" PRIu64" %" PRIu64" %" PRIu64"\n",histo_count[0],histo_count[1],histo_count[2]);
                         
                         histo_count[saturated_abundance]++;
 #endif

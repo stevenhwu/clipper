@@ -129,7 +129,7 @@ void Traversal::SetSolidKmersColour(BinaryBank *bank, int max_memory){
 	//TODO parse into hash again?? not very smart way to do this
 
 	solid_kmers_colour->rewind_all();
-	off_t nbElements = solid_kmers_colour->nb_elements();
+//	off_t nbElements = solid_kmers_colour->nb_elements();
 	off_t file_size = solid_kmers_colour->file_size();
 
 	long long int new_max = (2*solid_kmers_colour->nb_elements()) * OAHashColour::size_entry() ;
@@ -157,7 +157,7 @@ void Traversal::SetSolidKmersColour(BinaryBank *bank, int max_memory){
 //	}
 //	off_t nbElements = solid_kmers_colour->nb_elements();
 //
-	printf("Load kmer_colour file:%i\n",nkmers_read);
+//	printf("Load kmer_colour file:%i\n",nkmers_read);
 //	hash.printstat();
 //	}
 //	if(first){
@@ -224,7 +224,7 @@ int Traversal::extensions(kmer_type kmer, int strand, int &nt)
 // (very simple initial k-mer selection, current used in minia-graph)
 bool Traversal::get_new_starting_node(kmer_type branching_kmer, kmer_type &starting_kmer)
 {
-    char newNT[2];
+//    char newNT[2];
     int nt;
 
     // start with the branching kmer itself
@@ -264,7 +264,7 @@ bool Traversal::get_new_starting_node(kmer_type branching_kmer, kmer_type &start
 // TODO: port minia-graph to use this version, make sure it doesn't break the simple paths traversal
 bool Traversal::get_new_starting_node_improved(kmer_type branching_kmer, kmer_type &starting_kmer)
 {
-    char newNT[2];
+//    char newNT[2];
     int nt;
 
     for (int current_strand = 0; current_strand<2 ; current_strand++)
@@ -452,7 +452,7 @@ int Traversal::traverse_colour(kmer_type starting_kmer, char* resulting_sequence
     int len_extension = 0;
     char newNT[max_depth+1];
     KmerColour new_colour[max_depth+1];
-    kmer_type new_kmer[max_depth+1];
+//    kmer_type new_kmer[max_depth+1];
     int nnt = 0;
     bool looping = false;
 
@@ -731,7 +731,7 @@ int Traversal::simple_paths_avance_colour(kmer_type kmer, int strand, bool first
 //        Kmer:2005228447435396837 Does not exist. C:0
 //        RevComp:4345899215275863891	0
 		KmerColour second_kmer_colour;
-		KmerColour second_kmer_colour2;
+//		KmerColour second_kmer_colour2;
 //		second_kmer_colour2 = GetColour(second_kmer);
 		GetColour(second_kmer, &second_kmer_colour);
 //		second_kmer_colour2 = 20;
@@ -911,8 +911,8 @@ bool Frontline::check_inbranching(kmer_type from_kmer, int from_strand)
 bool MonumentTraversal::find_starting_kmer(kmer_type branching_kmer, kmer_type &starting_kmer)
 {
 
-    char newNT[2];
-    int nt;
+//    char newNT[2];
+//    int nt;
     bool debug=false;
     int sum_depths = 0;
 
@@ -934,7 +934,7 @@ bool MonumentTraversal::find_starting_kmer(kmer_type branching_kmer, kmer_type &
             bool should_continue = frontline.go_next_depth();
             if (!should_continue)
             {
-                if (debug) printf("strand %d shouldnt continue\n");
+                if (debug) printf("strand %d shouldnt continue\n", strand);
                 break;
             }
 
@@ -948,7 +948,7 @@ bool MonumentTraversal::find_starting_kmer(kmer_type branching_kmer, kmer_type &
             // stopping condition: nothing more to explore
             if (frontline.size() == 0)
             {
-                if (debug) printf("strand %d nothing more to explore\n");
+                if (debug) printf("strand %d nothing more to explore\n", strand);
                 break;
             }
 
@@ -986,7 +986,9 @@ bool MonumentTraversal::find_starting_kmer(kmer_type branching_kmer, kmer_type &
                     terminator = NULL; // do not use terminator in the following bubble traversal
                     if (explore_branching(previous_kmer, 1-previous_strand, (char*)useless_string, useless_int, current_kmer, &all_involved_extensions))
                     {
-                        if (debug) printf("depth %d useless int %d and starting belongs %d nb involved nodes %d\n",frontline.depth,useless_int,all_involved_extensions.find(starting_kmer) != all_involved_extensions.end(),all_involved_extensions.size());
+                        if (debug)
+                        	printf("depth %d useless int %d and starting belongs %d nb involved nodes %zd\n",
+                        		frontline.depth,useless_int,all_involved_extensions.find(starting_kmer) != all_involved_extensions.end(),all_involved_extensions.size());
                         if (all_involved_extensions.find(starting_kmer) != all_involved_extensions.end())
                         {
                             terminator = save_terminator;
@@ -1069,7 +1071,7 @@ set<string> MonumentTraversal::all_consensuses_between(kmer_type start_kmer,
 		int traversal_depth, set<kmer_type> used_kmers,
 		string current_consensus, bool &success) {
 
-	char debug = 0;
+//	char debug = 0;
     char bin2NT[4] = {'A','C','T','G'};
 //    printf("all consensuses between traversal_depth: %d kmer %s success %d\n",traversal_depth,print_kmer(start_kmer),success);
     set<string> consensuses;
@@ -1163,7 +1165,7 @@ bool MonumentTraversal::validate_consensuses(set<string> consensuses, char *resu
     int path_number = 0;
     for(set<string>::iterator it = consensuses.begin(); it != consensuses.end() ; ++it)
     {
-        if (debug)  printf("bubble path %d: %s (len=%d)\n",path_number,(*it).c_str(),(*it).length());
+        if (debug)  printf("bubble path %d: %s (len=%zd)\n",path_number,(*it).c_str(),(*it).length());
         mean+=(*it).length();
         path_number++;
     }
@@ -1184,7 +1186,7 @@ bool MonumentTraversal::validate_consensuses(set<string> consensuses, char *resu
     if (consensuses.size() == 1 && mean > sizeKmer+1) // deadend length should be < k+1 (most have length 1, but have seen up to 10 in ecoli)
         return false;
 
-    if (debug) printf("%d-bubble mean %d, stdev %.1f\n",consensuses.size(),mean,stdev);
+    if (debug) printf("%zd-bubble mean %d, stdev %.1f\n",consensuses.size(),mean,stdev);
 
     // traverse bubbles if paths have roughly the same length
     if (stdev>mean/5)
@@ -1273,7 +1275,7 @@ bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start
 
 //		printf("test:%d\n",s.length() );
 		kmer_type new_graine = start_kmer;
-		for (int i = 0; i < s.length(); ++i) {
+		for (size_t i = 0; i < s.length(); ++i) {
 			char c = s[i];
 			int nt2int = NT2int(c);
 			int new_strand = start_strand;

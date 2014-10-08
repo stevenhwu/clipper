@@ -29,12 +29,16 @@ bool ListSet::contains(set_elem elem)
 //Raluca
 bool ListSet::containsNotBinary(set_elem elem)
 {
-    int i;
-    for (i=0; i<liste.size(); i++)
+
+    for (size_t i=0; i<liste.size(); i++)
         if (liste[i]==elem)
             return true;
     
     return false;
+}
+
+ListSet::~ListSet(){
+
 }
 
 //--------------
@@ -179,9 +183,7 @@ void AssocPairedSet::finalize()
 
     liste_value.resize(liste.size());
 
-
-    int i;
-    for (i=0; i<liste_value.size(); i++)
+    for (size_t i=0; i<liste_value.size(); i++)
     {
         liste_value[i].nk1.nt = 0;
         liste_value[i].nk2.nt = 0;
@@ -245,13 +247,11 @@ bool AssocPairedSet::next_iterator()
 
 void AssocPairedSet::print()
 {
-    int i;
     char seq[100];
-    
-    printf("print %i elems \n",liste.size());
+    printf("print %zi elems \n",liste.size());
 
-    
-    for (i=0; i<liste.size(); i++)
+
+    for (size_t i=0; i<liste.size(); i++)
     {
         code2seq(liste[i], seq);
         printf("%s=(", seq);
@@ -331,4 +331,12 @@ uint64_t FPSetCascading4::get_total_memory() {
 }
 void FPSetCascading4::set_total_memory(uint64_t memory){
 	total_memory = memory;
+}
+
+FPSetCascading4::~FPSetCascading4(){
+	delete bloom2;
+	delete bloom3;
+	delete bloom4;
+	delete false_positives;
+
 }

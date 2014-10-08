@@ -2,14 +2,13 @@
 //#include "inttypes.h"
 #include <sys/resource.h> // for getrlimit()
 #include <unistd.h>
-#include <algorithm>
-#include <cmath>
-//#include <cstdint>
 #include <dirent.h>
 #include <sys/statvfs.h>
 #include <stdio.h>
+#include <cmath>
 #include <ctime>
 #include <cstdlib>
+#include <algorithm>
 
 #if OMP
 #include "omp.h"
@@ -400,7 +399,7 @@ void SortingCountPartitions::sorting_count_partitions_core(Bank *Sequences,
 			while (hash.next_iterator())
 			{
 				uint_abundance_t abundance = hash.iterator->value;
-				KmerColour colour = hash.iterator->colour;
+//				KmerColour colour = hash.iterator->colour;
 				if (abundance >= nks && abundance <= max_couv) //&&colour > min_colour_count
 				{
 
@@ -414,7 +413,7 @@ void SortingCountPartitions::sorting_count_partitions_core(Bank *Sequences,
 
             if (verbose >= 1)
 				fprintf(stderr,
-						"Pass %d/%d, loaded and sorted partition %d/%d, found %lld solid kmers so far, stored %lu here.\n",
+						"Pass %d/%d, loaded and sorted partition %d/%d, found %lld solid kmers so far, stored %u here.\n",
 						current_pass + 1, nb_passes, p + 1, nb_partitions,
 						(long long) (NbSolid_omp[tid]), local_counter );
 
@@ -617,7 +616,7 @@ uint32_t SortingCountPartitions::estimate_nb_partitions(uint64_t volume, uint32_
 
 	// get max number of open files
 	struct rlimit lim;
-	int max_open_files = 1000;
+	uint32_t max_open_files = 1000;
 	int err = getrlimit(RLIMIT_NOFILE, &lim);
 	if (err == 0)
 		max_open_files = lim.rlim_cur / 2;
@@ -626,9 +625,8 @@ uint32_t SortingCountPartitions::estimate_nb_partitions(uint64_t volume, uint32_
         volume_per_pass = volume / nb_passes;
         nb_partitions = ( volume_per_pass / max_memory ) + 1;
         if(verbose){
-        	printf("Initial estimation. volume:%llu nb_passes:%lu Volume_per_pass:%llu nb_partitions:%lu\n",
-        			volume, nb_passes, volume_per_pass, nb_partitions
-        			);
+        	printf("Initial estimation. volume:%lu nb_passes:%u Volume_per_pass:%lu nb_partitions:%u\n",
+        			volume, nb_passes, volume_per_pass, nb_partitions);
         }
         // if partitions are hashed instead of sorted, adjust for load factor
         // (as in the worst case, all kmers in the partition are distinct and partition may be slightly bigger due to hash-repartition)

@@ -591,8 +591,9 @@ void Bank::load_position()
 
 // BinaryBank: a binary file containing kmers
 
-BinaryBankConcurrent::BinaryBankConcurrent(char *given_filename, int given_sizeElement, bool write, int given_nthreads) : BinaryBank(given_filename,given_sizeElement,write) 
-{
+BinaryBankConcurrent::BinaryBankConcurrent(char *given_filename,
+		int given_sizeElement, bool write, int given_nthreads) :
+		BinaryBank(given_filename, given_sizeElement, write) {
     nthreads = given_nthreads;
     
     //free(buffer); buffer =NULL; //cannot do that

@@ -34,9 +34,11 @@ public:
 
 		return count;
 	}
+	static int kmer_colour_pattern_string(KmerColour *colour, int length,
+			char *seq, int error_code = kErrorCode);
+
 	static void rev_colour(KmerColour *colour, int length);
 	static int count_colour(KmerColour *colour, int length);
-
 
 	static int number_of_colour(KmerColour colour);
 
@@ -47,16 +49,18 @@ public:
 			long long len_left, KmerColour* contig_colour, int &colour_len);
 
 	static int colour_table(std::string &report, KmerColour *colour,
-			int colour_len, int max_colour_count)__attribute__ ((deprecated));
+			int colour_len, int max_colour_count) __attribute__ ((deprecated));
 
 	static std::string summary(std::string &report, KmerColour *kmer_colour,
-			int colour_len)__attribute__ ((deprecated));
+			int colour_len) __attribute__ ((deprecated));
 
-	static void summary_colour_code(std::string &report, KmerColour *kmer_colour,
-			int colour_len)__attribute__ ((deprecated));
+	static void summary_colour_code(std::string &report,
+			KmerColour *kmer_colour, int colour_len)
+					__attribute__ ((deprecated));
 
-	static void summary_colour_count(std::string &report, KmerColour *kmer_colour,
-			int colour_len)__attribute__ ((deprecated));
+	static void summary_colour_count(std::string &report,
+			KmerColour *kmer_colour, int colour_len)
+					__attribute__ ((deprecated));
 
 };
 

@@ -8,13 +8,14 @@ ifeq ($(UNAME), FreeBSD)
 CC=g++48
 CFLAGS += -D_GLIBCXX_USE_C99
 #LDFLAGS= -L/usr/local/lib/gcc48/
-LDFLAGS+= -Wl,-rpath,/usr/local/lib/gcc48
+LDFLAGS += -Wl,-rpath,/usr/local/lib/gcc48
 endif
 
 SOURCES=Pool.cpp Bank.cpp Bloom.cpp Hash16.cpp LargeInt.cpp \
 	Kmer.cpp Terminator.cpp Traversal.cpp LinearCounter.cpp \
 	Set.cpp Utils.cpp SortingCount.cpp Debloom.cpp OAHash.cpp \
-	KmerColour.cpp Memory.cpp SortingCountPartitions.cpp
+	KmerColour.cpp Memory.cpp SortingCountPartitions.cpp \
+	Assembler.cpp
 
 TEST_SOURCES=KmerColour.cpp
 #Pool.cpp Bank.cpp Bloom.cpp Hash16.cpp LargeInt.cpp \

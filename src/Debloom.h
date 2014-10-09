@@ -26,25 +26,41 @@ typedef ListSet FPSet; // list-based
 //typedef HashSet FPSet; // hash-based
 
 // GUS: see comment in Debloom.cpp, where false_positive is been declared
-extern Set *false_positives;
+//extern Set *false_positives;
 
 int debloom(int order, int max_memory);
-void end_debloom_partition(bool last_partition);
+void end_debloom_partition(bool last_partition, uint64_t &n_false_positives);
 
 Set *dummy_false_positives();
 Set *load_false_positives();
 Set *load_false_positives_cascading4();
 
-void print_size_summary(FPSet *fp);
-void print_size_summary(FPSetCascading4 *fp);  
 
-uint64_t get_FPSetCascading4_size (FPSetCascading4 *fp);
 
 class DebloomUtils{
+
+
+
 public:
-	static int debloom_partition(char *solid_kmer_partition_file, int max_memory);
-	static void end_debloom_partition_multi_files(bool last_partition, char* solid_kmer_partition_file);
-	static Set *load_false_positives_cascading4_partition(char* solid_kmer_partition_file);
+
+	static Set *create_false_positives_cascading4_partition(
+			char* solid_kmer_partition_file, int max_memory);
+
+	static int debloom_partition(char *solid_kmer_partition_file,
+			int max_memory);
+
+	static Set *load_false_positives_cascading4_partition(
+			char* solid_kmer_partition_file);
+	static void end_debloom_partition_multi_files(bool last_partition,
+			char* solid_kmer_partition_file, uint64_t &n_false_positives);
+
+	static uint64_t get_FPSetCascading4_size(FPSetCascading4 *fp);
+	static uint64_t countFP(Bank *FalsePositives);
+
+	static void print_size_summary(FPSet *fp, uint64_t nbkmers_solid);
+	static void print_size_summary(FPSetCascading4 *fp, uint64_t nbkmers_solid);
+
+
 };
 
 #endif

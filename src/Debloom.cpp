@@ -4,19 +4,21 @@
 // both inheriting from Set. The choice is made by the function called
 // to load the false positives: load_false_positives() or
 // load_false_positives_cascading4().
-Set *false_positives; 
 
-uint64_t nbkmers_solid = 0, b1_size = 0; 
+//Set *false_positives;
+
+//uint64_t nbkmers_solid = 0,
+uint64_t b1_size = 0;
 
 FILE * F_debloom_read;
 FILE * F_debloom_write;
-uint64_t n_false_positives=0;
+//uint64_t n_false_positives=0;
 
 Hash16 * hasht1;
 
 //extern const int print_table_frequency;
 
-void end_debloom_partition(bool last_partition)
+void end_debloom_partition(bool last_partition, uint64_t &n_false_positives)
 {
 
     int value;
@@ -100,7 +102,7 @@ int debloom(int order, int max_memory)
     kmer_type new_graine, kmer;
     int nt;
    
-    uint64_t NbSolidKmer =0;
+    uint64_t nbkmers_solid =0;
     // write all positive extensions in disk file
     while (SolidKmers->read_element(&kmer))
     {
@@ -162,10 +164,10 @@ int debloom(int order, int max_memory)
 
             }
         }
-        NbSolidKmer++;
-        if ((NbSolidKmer%print_table_frequency)==0) fprintf (stderr,"%c Writing positive Bloom Kmers %" PRId64 "",13,NbSolidKmer);
+        nbkmers_solid++;
+        if ((nbkmers_solid%print_table_frequency)==0) fprintf (stderr,"%c Writing positive Bloom Kmers %" PRId64 "",13,nbkmers_solid);
     }
-    nbkmers_solid =  NbSolidKmer; // GUS: it's global now
+//    nbkmers_solid =  NbSolidKmer; // GUS: it's global now
 
     fprintf(stderr,"\n%" PRId64 " kmers written\n",cc);
 
@@ -188,8 +190,9 @@ int debloom(int order, int max_memory)
 
     printf("%d partitions will be needed\n",(int)(nbkmers_solid/max_kmer_per_part));
 
-    NbSolidKmer =0;
+    nbkmers_solid =0;
     int numpart = 0;
+    uint64_t n_false_positives = 0;
     SolidKmers->rewind_all();
 
     // deblooming:
@@ -200,14 +203,15 @@ int debloom(int order, int max_memory)
     {
         hasht1->add(kmer);
 
-        NbSolidKmer++;
-        if ((NbSolidKmer%print_table_frequency)==0) fprintf (stderr,"%cBuild Hash table %" PRId64 "",13,NbSolidKmer);
+        nbkmers_solid++;
+        if ((nbkmers_solid%print_table_frequency)==0)
+        	fprintf (stderr,"%cBuild Hash table %" PRId64 "",13,nbkmers_solid);
 
         if(hasht1->nb_elem >max_kmer_per_part) //end partition,  find false positives
         {
             fprintf(stderr,"End of debloom partition  %" PRId64 " / %" PRId64 " \n",hasht1->nb_elem,max_kmer_per_part);
 
-            end_debloom_partition(false);
+            end_debloom_partition(false, n_false_positives);
 
             //swap file pointers
             F_tmp = F_debloom_read;
@@ -230,7 +234,7 @@ int debloom(int order, int max_memory)
 
     ///////////////////////// last partition, will write all the FP's to the good file
 
-    end_debloom_partition(true); 
+    end_debloom_partition(true, n_false_positives);
 
     /////////end write files
 
@@ -254,19 +258,6 @@ int debloom(int order, int max_memory)
 
 }
 
-uint64_t countFP(Bank *FalsePositives)
-{
-  char * rseq;
-  int readlen;
-  uint64_t nbFP = 0;
-
-  while (FalsePositives->get_next_seq(&rseq,&readlen))
-    nbFP++;
-  
-  FalsePositives->rewind_all();
-  return nbFP;
-}
-
 Set *load_false_positives() 
 {
     int64_t NbInsertedKmers = 0;
@@ -279,7 +270,7 @@ Set *load_false_positives()
 
     // alloc false positives with the just the right estimated size
 
-    uint64_t nbFP = countFP(FalsePositives);
+    uint64_t nbFP = DebloomUtils::countFP(FalsePositives);
 
     FPSet *fp = new FPSet(nbFP);
     
@@ -297,7 +288,7 @@ Set *load_false_positives()
 
     fprintf (stderr,"\nInserted %" PRId64 " false positive kmers in the hash structure.\n\n",NbInsertedKmers);
 
-    print_size_summary(fp);
+    DebloomUtils::print_size_summary(fp, 0);
 
     return fp;
 }
@@ -312,13 +303,13 @@ Set *dummy_false_positives()
 Set *load_false_positives_cascading4()
 {
 
-if (nbkmers_solid==0){
+//if (nbkmers_solid==0){
 	BinaryBank *SolidKmers = new BinaryBank(return_file_name(solid_kmers_file),sizeof(kmer_type),0);
-	nbkmers_solid = SolidKmers->nb_elements();
+	uint64_t nbkmers_solid = SolidKmers->nb_elements();
 //	b1_size = 20239964;
 //	uint64_t estimated_BL1_freesize =  (uint64_t)(nbkmers_solid*NBITS_PER_KMER);
 
-}
+//}
   int64_t NbInsertedKmers;
   char * rseq;
   int readlen;
@@ -327,7 +318,7 @@ if (nbkmers_solid==0){
   
   // **** Initialize B2, B3, B4 and T4 ****
   Bank *FalsePositives = new Bank(return_file_name(false_positive_kmers_file));
-  uint64_t nbFP = countFP(FalsePositives);
+  uint64_t nbFP = DebloomUtils::countFP(FalsePositives);
   
   FPSetCascading4 *fp = new FPSetCascading4;
   
@@ -366,7 +357,8 @@ if (nbkmers_solid==0){
   int addKmers = 0;
   NbInsertedKmers = 0;
   FILE *T2_file = fopen(return_file_name("t2_kmers"), "w+"); // We will read this file later, when filling T4 
-  BinaryBank *SolidKmers = new BinaryBank(return_file_name(solid_kmers_file),sizeof(kmer),0);
+//  BinaryBank *SolidKmers = new BinaryBank(return_file_name(solid_kmers_file),sizeof(kmer),0);
+  SolidKmers->rewind_all();
   while(SolidKmers->read_element(&kmer))
   {
     if (fp->bloom2->contains(kmer))
@@ -444,47 +436,27 @@ if (nbkmers_solid==0){
 
   printf("\nInserted %d (estimated, %" PRId64 ") kmers in T4.\n\n", addKmers, (uint64_t)fp->false_positives->capacity());
 
-  uint64_t total_size = get_FPSetCascading4_size(fp);
+  uint64_t total_size = DebloomUtils::get_FPSetCascading4_size(fp);
   fp->set_total_memory(total_size);
-  print_size_summary(fp);
+  DebloomUtils::print_size_summary(fp, nbkmers_solid);
 
   return fp;
 }
 
-void print_size_summary(FPSet *fp)
+uint64_t DebloomUtils::countFP(Bank *FalsePositives)
 {
-  int bits_per_FP_element = FPSet::bits_per_element;
+  char * rseq;
+  int readlen;
+  uint64_t nbFP = 0;
 
-  uint64_t size_B1 = b1_size,
-           size_T1 = fp->capacity() * FPSet::bits_per_element;
-  double total_size = (double)(size_B1 + size_T1);
+  while (FalsePositives->get_next_seq(&rseq,&readlen))
+    nbFP++;
 
-  fprintf(stderr,"Size of the Bloom table  : %.2lf MB\n", bits_to_MB(size_B1) );
-  fprintf(stderr,"                           %.2lf bits / solid kmer\n", b1_size/(double)(nbkmers_solid) );  
-  fprintf(stderr, "Size of the FP table     : %" PRId64 " FP x %d bits =  %.2lf MB  \n", fp->capacity(), bits_per_FP_element, bits_to_MB((double)(size_T1)) );
-  fprintf(stderr,"                                      actual implementation : %.2lf bits / solid kmer\n", size_T1/(double)nbkmers_solid);
-  fprintf(stderr,"  assuming list of kmers, i.e. sizeof(kmer_type) bits / FP : %.2lf bits / solid kmer \n\n",(fp->capacity()*sizeof(kmer_type)*8LL)/(double)(nbkmers_solid));
-  fprintf(stderr,"      Total %.2lf MB for %" PRId64 " solid kmers  ==>  %.2lf bits / solid kmer\n\n", bits_to_MB(total_size), nbkmers_solid, total_size / nbkmers_solid);
+  FalsePositives->rewind_all();
+  return nbFP;
 }
 
-void print_size_summary(FPSetCascading4 *fp)
-{
-  uint64_t size_B1 = b1_size,
-    size_B2 = fp->bloom2->tai,
-    size_B3 = fp->bloom3->tai,
-    size_B4 = fp->bloom4->tai,
-    size_T4 = fp->false_positives->capacity() * FPSet::bits_per_element;
-  double total_size = (double)(size_B1 + size_B2 + size_B3 + size_B4 + size_T4);
-
-  fprintf(stderr,"Size of the Bloom table (B1)  : %.2lf MB  %" PRId64 "\n", bits_to_MB((double)size_B1), size_B1);
-  fprintf(stderr,"Size of the Bloom table (B2)  : %.2lf MB  %" PRId64 "\n", bits_to_MB((double)size_B2), size_B2);
-  fprintf(stderr,"Size of the Bloom table (B3)  : %.2lf MB  %" PRId64 "\n", bits_to_MB((double)size_B3), size_B3);
-  fprintf(stderr,"Size of the Bloom table (B4)  : %.2lf MB  %" PRId64 "\n", bits_to_MB((double)size_B4), size_B4);
-  fprintf(stderr,"Size of the FP table (T4)     : %.2lf MB  %" PRId64 "\n", bits_to_MB((double)size_T4), size_T4);
-  fprintf(stderr,"      Total %.2lf MB for %" PRId64 " solid kmers  ==>  %.2lf bits / solid kmer\n\n", bits_to_MB(total_size), nbkmers_solid, total_size / nbkmers_solid);
-}
-
-uint64_t get_FPSetCascading4_size (FPSetCascading4 *fp)
+uint64_t DebloomUtils::get_FPSetCascading4_size (FPSetCascading4 *fp)
 {
   uint64_t size_B1 = 0,//b1_size, size_B1 is NOT in FP
     size_B2 = fp->bloom2->tai,
@@ -495,6 +467,51 @@ uint64_t get_FPSetCascading4_size (FPSetCascading4 *fp)
   return total_size;
 }
 
+
+void DebloomUtils::print_size_summary(FPSet *fp, uint64_t nbkmers_solid)
+{
+  int bits_per_FP_element = FPSet::bits_per_element;
+
+  uint64_t size_B1 = b1_size,
+           size_T1 = fp->capacity() * FPSet::bits_per_element;
+  double total_size = (double)(size_B1 + size_T1);
+
+	fprintf(stderr, "Size of the Bloom table  : %.2lf MB\n",
+			bits_to_MB(size_B1));
+	fprintf(stderr, "                           %.2lf bits / solid kmer\n",
+			b1_size / (double) (nbkmers_solid));
+	fprintf(stderr, "Size of the FP table     : %" PRId64 " FP x %d bits =  %.2lf MB  \n",
+			fp->capacity(), bits_per_FP_element, bits_to_MB((double) (size_T1)));
+	fprintf(stderr, "                                      actual implementation : %.2lf bits / solid kmer\n",
+			size_T1 / (double) nbkmers_solid);
+	fprintf(stderr, "  assuming list of kmers, i.e. sizeof(kmer_type) bits / FP : %.2lf bits / solid kmer \n\n",
+			(fp->capacity() * sizeof(kmer_type) * 8LL) / (double) (nbkmers_solid));
+	fprintf(stderr, "      Total %.2lf MB for %" PRId64 " solid kmers  ==>  %.2lf bits / solid kmer\n\n",
+			bits_to_MB(total_size), nbkmers_solid, total_size / nbkmers_solid);
+}
+
+void DebloomUtils::print_size_summary(FPSetCascading4 *fp, uint64_t nbkmers_solid)
+{
+	uint64_t size_B1 = b1_size,
+			size_B2 = fp->bloom2->tai,
+			size_B3 = fp->bloom3->tai,
+			size_B4 = fp->bloom4->tai,
+			size_T4 = fp->false_positives->capacity() * FPSet::bits_per_element;
+	double total_size = (double) (size_B1 + size_B2 + size_B3 + size_B4 + size_T4);
+
+	fprintf(stderr, "Size of the Bloom table (B1)  : %.2lf MB  %" PRId64 "\n",
+			bits_to_MB((double) size_B1), size_B1);
+	fprintf(stderr, "Size of the Bloom table (B2)  : %.2lf MB  %" PRId64 "\n",
+			bits_to_MB((double) size_B2), size_B2);
+	fprintf(stderr, "Size of the Bloom table (B3)  : %.2lf MB  %" PRId64 "\n",
+			bits_to_MB((double) size_B3), size_B3);
+	fprintf(stderr, "Size of the Bloom table (B4)  : %.2lf MB  %" PRId64 "\n",
+			bits_to_MB((double) size_B4), size_B4);
+	fprintf(stderr, "Size of the FP table (T4)     : %.2lf MB  %" PRId64 "\n",
+			bits_to_MB((double) size_T4), size_T4);
+	fprintf(stderr,"      Total %.2lf MB for %" PRId64 " solid kmers  ==>  %.2lf bits / solid kmer\n\n",
+			bits_to_MB(total_size), nbkmers_solid, total_size / nbkmers_solid);
+}
 
 int DebloomUtils::debloom_partition(char *solid_kmer_partition_file, int max_memory)
 {//ONLY work for order ==0 now.
@@ -519,7 +536,7 @@ int DebloomUtils::debloom_partition(char *solid_kmer_partition_file, int max_mem
     KmerColour kmer_colour;
     int nt;
 
-    uint64_t NbSolidKmer =0;
+    uint64_t nbkmers_solid =0;
     // write all positive extensions in disk file
     uint64_t cc2=0;
 
@@ -545,10 +562,11 @@ int DebloomUtils::debloom_partition(char *solid_kmer_partition_file, int max_mem
 
             }
         }
-        NbSolidKmer++;
-        if ((NbSolidKmer%print_table_frequency)==0) fprintf (stderr,"%c Writing positive Bloom Kmers %" PRId64 "",13,NbSolidKmer);
+        nbkmers_solid++;
+        if ((nbkmers_solid%print_table_frequency)==0)
+        	fprintf (stderr,"%c Writing positive Bloom Kmers %" PRId64 "",13,nbkmers_solid);
     }
-    nbkmers_solid =  NbSolidKmer; // GUS: it's global now
+//    nbkmers_solid =  NbSolidKmer; // GUS: it's global now
 
     fprintf(stderr,"\n%" PRId64 " kmers written. All possible %" PRId64 "\n",cc, cc2);
 
@@ -571,8 +589,9 @@ int DebloomUtils::debloom_partition(char *solid_kmer_partition_file, int max_mem
 
     printf("%d partitions will be needed\n",(int)(nbkmers_solid/max_kmer_per_part));
 
-    NbSolidKmer =0;
+    nbkmers_solid =0;
     int numpart = 0;
+    uint64_t n_false_positives = 0;
     solid_kmer_colour->rewind_all();
 
     // deblooming:
@@ -584,14 +603,15 @@ int DebloomUtils::debloom_partition(char *solid_kmer_partition_file, int max_mem
 
         hasht1->add(kmer);
 
-        NbSolidKmer++;
-        if ((NbSolidKmer%print_table_frequency)==0) fprintf (stderr,"%cBuild Hash table %" PRId64 "",13,NbSolidKmer);
+        nbkmers_solid++;
+        if ((nbkmers_solid%print_table_frequency)==0)
+        	fprintf (stderr,"%cBuild Hash table %" PRId64 "",13,nbkmers_solid);
 
         if(hasht1->nb_elem >max_kmer_per_part) //end partition,  find false positives
         {
             fprintf(stderr,"End of debloom partition  %" PRId64 " / %" PRId64 " \n",hasht1->nb_elem,max_kmer_per_part);
 
-            end_debloom_partition_multi_files(false, solid_kmer_partition_file);
+            end_debloom_partition_multi_files(false, solid_kmer_partition_file, n_false_positives);
 
             //swap file pointers
             F_tmp = F_debloom_read;
@@ -602,7 +622,8 @@ int DebloomUtils::debloom_partition(char *solid_kmer_partition_file, int max_mem
             //reset hash table
             hasht1->empty_all();
 
-            fprintf(stderr,"\n%" PRId64 " false positives written , partition %i \n",n_false_positives,numpart);
+            fprintf(stderr,"\n%" PRId64 " false positives written , partition %i \n",
+            		n_false_positives,numpart);
 
             numpart++;
         } ///end partition
@@ -614,13 +635,14 @@ int DebloomUtils::debloom_partition(char *solid_kmer_partition_file, int max_mem
 
     ///////////////////////// last partition, will write all the FP's to the good file
 
-    end_debloom_partition_multi_files(true, solid_kmer_partition_file);
+    end_debloom_partition_multi_files(true, solid_kmer_partition_file, n_false_positives);
 
 
     /////////end write files
 
 
-    fprintf(stderr,"Total nb false positives stored in the Debloom hashtable %" PRId64 " \n",n_false_positives);
+    fprintf(stderr,"Total nb false positives stored in the Debloom hashtable %" PRId64 " \n",
+    		n_false_positives);
 
     delete hasht1;
 
@@ -639,8 +661,8 @@ int DebloomUtils::debloom_partition(char *solid_kmer_partition_file, int max_mem
 
 }
 
-void DebloomUtils::end_debloom_partition_multi_files(bool last_partition, char* solid_kmer_partition_file)
-{
+void DebloomUtils::end_debloom_partition_multi_files(bool last_partition,
+		char* solid_kmer_partition_file, uint64_t &n_false_positives) {
 
     int value;
     char false_positive_kmer_char[sizeKmer+1];
@@ -711,17 +733,11 @@ void DebloomUtils::end_debloom_partition_multi_files(bool last_partition, char* 
 Set *DebloomUtils::load_false_positives_cascading4_partition(char* solid_kmer_partition_file)
 {
 
-if (nbkmers_solid==0){
 	BinaryBank *solid_kmer_colour = new BinaryBank(
 			return_file_name(solid_kmer_partition_file),
 			sizeof(kmer_type) + sizeof(KmerColour), 0);
-	nbkmers_solid = solid_kmer_colour->nb_elements();
-	solid_kmer_colour->close();
-	delete solid_kmer_colour;
-//	b1_size = 20239964;
-//	uint64_t estimated_BL1_freesize =  (uint64_t)(nbkmers_solid*NBITS_PER_KMER);
+	uint64_t nbkmers_solid = solid_kmer_colour->nb_elements();
 
-}
   int64_t NbInsertedKmers;
   char * rseq;
   int readlen;
@@ -734,7 +750,7 @@ if (nbkmers_solid==0){
   // **** Initialize B2, B3, B4 and T4 ****
 //  Bank *FalsePositives = new Bank(return_file_name(false_positive_kmers_file));
   Bank *FalsePositives = new Bank(return_file_name(temp_file));
-  uint64_t nbFP = countFP(FalsePositives);
+  uint64_t nbFP = DebloomUtils::countFP(FalsePositives);
 
   FPSetCascading4 *fp = new FPSetCascading4;
 
@@ -794,9 +810,7 @@ if (nbkmers_solid==0){
   FILE *T2_file = fopen(return_file_name("t2_kmers"), "w+"); // We will read this file later, when filling T4
 //  BinaryBank *SolidKmers = new BinaryBank(return_file_name(solid_kmers_file),sizeof(kmer),0);
 //  while(SolidKmers->read_element(&kmer))
-  BinaryBank *solid_kmer_colour = new BinaryBank(
-  			return_file_name(solid_kmer_partition_file),
-  			sizeof(kmer_type) + sizeof(KmerColour), 0);
+  solid_kmer_colour->rewind_all();
   while(solid_kmer_colour->read_kmer_colour(&kmer, &kmer_colour) )
   {
     if (fp->bloom2->contains(kmer))
@@ -879,7 +893,18 @@ if (nbkmers_solid==0){
 
   uint64_t total_size = get_FPSetCascading4_size(fp);
   fp->set_total_memory(total_size);
-  print_size_summary(fp);
+  print_size_summary(fp, nbkmers_solid);
 
   return fp;
+}
+
+Set* DebloomUtils::create_false_positives_cascading4_partition(char* solid_kmer_partition_file, int max_memory){
+
+	debloom_partition(solid_kmer_partition_file, max_memory);
+	Set* false_positives = load_false_positives_cascading4_partition(
+				solid_kmer_partition_file);
+
+	return false_positives;
+
+
 }

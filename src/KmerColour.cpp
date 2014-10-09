@@ -23,7 +23,8 @@
 //extern int sizeKmer;
 //uint64_t nsolids = 0;
 
-int kmer_colour_pattern_string(KmerColour *colour, int length, char *seq, int error_code) {
+int KmerColourUtil::kmer_colour_pattern_string(KmerColour *colour, int length,
+		char *seq, int error_code) {
 //	printf("Length:%d\n", length);
 	int valid_length = 0;
 	for (int i = 0; i < length; ++i) {
@@ -154,6 +155,7 @@ int KmerColourUtil::colour_table(std::string &report, KmerColour *colour, int co
 void KmerColourUtil::summary_colour_code (std::string &report, KmerColour *kmer_colour, int colour_len){
 	char colour_seq[colour_len+1];
 	kmer_colour_pattern_string(kmer_colour, colour_len, colour_seq);
+//	kmer_colour_pattern_string(kmer_colour, colour_len, colour_seq, )
 	report.append("ColourCode:").append(colour_seq).append("\n");
 
 }

@@ -136,7 +136,7 @@ void Traversal::SetSolidKmersColour(BinaryBank *bank, int max_memory){
 	//reach max after searching through loop, just double it for now, fix it later
 	//(1+solid_kmers_colour->nb_elements()) is the min, but slow, divided into partitions to ensure speed
 
-	printf("%llu %zu\n", new_max/2, file_size);
+//	printf("%llu %zu\n", new_max/2, file_size);
 
 	hash = new OAHashColour(new_max);
 //	hash->printstat();

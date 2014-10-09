@@ -102,23 +102,23 @@ public:
 class OAHashColour: public AbstractOAHash{
 
 private:
-//#pragma pack(16)
-	struct element_pair
+	//#pragma pack(16)
+	struct element_triplet
 	{
 		key_type key;
 		uint32_t value;
 		KmerColour colour;
 	};
-	element_pair* data;
-
+	element_triplet* data;
 
 protected:
-    bool is_occupied(element_pair *element);
+    bool is_occupied(element_triplet *element);
+
 public:
 
     static int size_entry();
 
-    element_pair *iterator;
+    element_triplet *iterator;
 	void start_iterator();
 	bool next_iterator();
 
@@ -129,8 +129,11 @@ public:
     void increment_colour(key_type graine, KmerColour colour);
     bool get_colour( key_type graine, KmerColour *colour);
 
-    element_pair* find_slot(key_type key);
+    element_triplet* find_slot(key_type key);
     bool has_key(key_type graine);
+
+
+
 };
 
 #endif

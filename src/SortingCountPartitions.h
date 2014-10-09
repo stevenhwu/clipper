@@ -17,7 +17,7 @@
 #include "Bank.h"
 //#include "Kmer.h"
 #include "Utils.h"
-//#include "OAHash.h"
+#include "OAHash.h"
 
 
 
@@ -45,12 +45,28 @@ public:
 
 
 private:
-	static void sorting_count_partitions_core(Bank *Sequences, char* solid_kmer_partition_file,
-				int max_memory, int max_disk_space, int split_index, int verbose=0);
-	static uint32_t estimate_nb_partitions(uint64_t volume, uint32_t &nb_passes, int max_memory, int verbose=0);
+	static void sorting_count_partitions_core(Bank *Sequences,
+			char* solid_kmer_partition_file, int max_memory, int max_disk_space,
+			int split_index, int verbose = 0);
+
+	static void estimate_nb_partitions(uint64_t volume, uint32_t &nb_passes,
+			uint32_t &nb_partitions, int max_disk_space, int max_memory,
+			int verbose = 0);
+
+	static void initialise_kmer_tables(Bank* Sequences, int max_read_length,
+			kmer_type* kmer_table_seq, KmerColour* kmer_table_col);
+
+	static int get_partition_index(kmer_type kmer_hash, uint32_t nb_passes,
+			uint32_t nb_partitions);
+
+	static void convert_redundant_file_to_hash(OAHashColour* hash,
+			BinaryBankConcurrent *redundant_file);
+
+	static uint save_solid_kmer_colour(OAHashColour* hash,
+			BinaryBankConcurrent* solid_kmers_colour, int tid);
 
 
 };
-//extern int optimism;
+
 
 #endif

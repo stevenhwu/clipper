@@ -2,8 +2,10 @@
 #include "Bank.h"
 
 // some globals that don't really belong anywhere
-uint32_t nks; // min abundance
+uint32_t min_abundance; // min abundance
+uint32_t min_colour_coverage;
 uint32_t max_couv = 2147483646; // note: uint_abundance_t is 32 bits in SortingCount.cpp
+uint64_t genome_size;
 struct timeval tim;
 
 const char *solid_kmers_file = (char *)"solid_kmers_binary"; 
@@ -76,7 +78,7 @@ void bloom_pass_reads(Bank *Sequences, T *bloom_to_insert, U *bloom_counter, cha
             if (bloom_counter != NULL)
             {
                 // discard kmers which are not solid
-                if( ! bloom_counter->contains_n_occ(kmer,nks)) continue;
+                if( ! bloom_counter->contains_n_occ(kmer,min_abundance)) continue;
             }
 
             bloom_to_insert->add(kmer);
@@ -292,7 +294,7 @@ void end_kmer_count_partition(bool last_partition, Hash16 *hasht1)
         fwrite(&graine, sizeof(graine), 1, F_kmercpt_write);
         fwrite(&cptk, sizeof(cptk), 1, F_kmercpt_write);  
 
-        if (last_partition && cptk >= nks)
+        if (last_partition && cptk >= min_abundance)
             // if last partition, also need to search for solid kmers in remaining of hasht1, so this is not enough:
         {
             SolidKmers->write_element(&graine);
@@ -304,7 +306,7 @@ void end_kmer_count_partition(bool last_partition, Hash16 *hasht1)
 
     if (last_partition)  
     {
-        nso+=hasht1->getsolids(NULL,SolidKmers,nks); // get remaining solids of hasht1
+        nso+=hasht1->getsolids(NULL,SolidKmers,min_abundance); // get remaining solids of hasht1
         fprintf(stderr,"nsolid kmers =  %lli  \n",(long long)nso);
 
         SolidKmers->close();
@@ -358,7 +360,7 @@ void exact_kmer_count(Bank *Sequences, T *bloom_counter, unsigned long max_memor
 	   kmer = extractKmerFromRead(rseq,i,&graine,&graine_revcomp);
 
 	   // discard kmers which are not solid
-	   if( ! bloom_counter->contains_n_occ(kmer,nks)) continue;
+	   if( ! bloom_counter->contains_n_occ(kmer,min_abundance)) continue;
 	   
 	   //insert into hasht1
 	   NbInserted_unique += hasht1->add(kmer);
@@ -439,7 +441,7 @@ STARTWALL(count);
 
     STOPWALL(count,"Counted kmers");
 
-    fprintf(stderr,"\n------------------ Counted kmers and kept those with abundance >=%i \n\n",nks);
+    fprintf(stderr,"\n------------------ Counted kmers and kept those with abundance >=%i \n\n",min_abundance);
     
     
     ////////////////////////////////////////////////////fin bloom insert

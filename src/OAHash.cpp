@@ -263,7 +263,7 @@ int OAHash::size_entry()
 OAHashColour::OAHashColour(uint64_t max_memory) : AbstractOAHash()// in bytes
 {
 
-	sizeof_element_pair = sizeof(element_pair);
+	sizeof_element_pair = sizeof(element_triplet);
     hash_size = max_memory / sizeof_element_pair;
 
     if (hash_size == 0)
@@ -272,7 +272,7 @@ OAHashColour::OAHashColour(uint64_t max_memory) : AbstractOAHash()// in bytes
         exit(1);
     }
     nb_inserted_keys = 0;
-    data = (element_pair *) calloc( hash_size, sizeof(element_pair));  //create hashtable
+    data = (element_triplet *) calloc( hash_size, sizeof(element_triplet));  //create hashtable
 
 
 }
@@ -285,7 +285,7 @@ OAHashColour::~OAHashColour(){
 
 void OAHashColour::increment_colour(key_type graine, KmerColour colour) {
 
-	element_pair *element = find_slot(graine);
+	element_triplet *element = find_slot(graine);
 	if (!is_occupied(element))
 	{
 		element->key = graine;
@@ -303,7 +303,7 @@ void OAHashColour::increment_colour(key_type graine, KmerColour colour) {
 
 void OAHashColour::insert_colour(key_type graine, KmerColour colour)
 {
-    element_pair *element = find_slot(graine);
+    element_triplet *element = find_slot(graine);
     if (!is_occupied(element))
     {
         element->key = graine;
@@ -316,17 +316,17 @@ void OAHashColour::insert_colour(key_type graine, KmerColour colour)
 
 bool OAHashColour::get_colour( key_type graine, KmerColour *colour)
 {
-    element_pair *element = find_slot(graine);
+    element_triplet *element = find_slot(graine);
     if (!is_occupied(element))
         return false;
     if ((element->key) == graine && (colour != NULL))
         *colour = element->colour;
     return true;
 }
-OAHashColour::element_pair * OAHashColour::find_slot(key_type key)
+OAHashColour::element_triplet * OAHashColour::find_slot(key_type key)
 {
     uint64_t ptr = hashcode(key) % hash_size;
-    element_pair *element = data+ptr;
+    element_triplet *element = data+ptr;
     uint64_t retries = 0;
 
     // search until we either find the key, or find an empty slot.
@@ -345,7 +345,7 @@ OAHashColour::element_pair * OAHashColour::find_slot(key_type key)
     return element;
 }
 
-bool OAHashColour::is_occupied(element_pair *element)
+bool OAHashColour::is_occupied(element_triplet *element)
 {
     return (element->value != 0);
 }
@@ -380,7 +380,7 @@ bool OAHashColour::has_key(key_type graine) {
 }
 int OAHashColour::size_entry()
 {
-    return sizeof(element_pair);
+    return sizeof(element_triplet);
 }
 
 

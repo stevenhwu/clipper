@@ -602,7 +602,7 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
 #endif
                     }
 
-                    if (abundance >= nks && abundance <= max_couv)
+                    if (abundance >= min_abundance && abundance <= max_couv)
                     {
                     	counter++;
 //if(first){
@@ -726,7 +726,7 @@ void sorting_count(Bank *Sequences, char *prefix, int max_memory, int max_disk_s
     rmdir(temp_dir);//TODO add it back
 
     STOPWALL(count,"Counted kmers");
-    fprintf(stderr,"\n------------------ Counted kmers and kept those with abundance >=%i,     \n",nks);
+    fprintf(stderr,"\n------------------ Counted kmers and kept those with abundance >=%i,     \n",min_abundance);
 } 
 
 

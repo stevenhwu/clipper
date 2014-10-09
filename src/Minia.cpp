@@ -158,7 +158,7 @@ inline void assemble(Bloom* bloo1, Set* false_positives)
 //            	for (int i = 0; i < len_right; ++i) {
 //            		printf("%u ",right_colour_traversal[i]);
 //				}
-            	kmer_colour_pattern_string(right_colour_traversal, len_right, colour_seq);
+            	KmerColourUtil::kmer_colour_pattern_string(right_colour_traversal, len_right, colour_seq);
 				printf("RightColour:%s\n",colour_seq);
             }
 
@@ -213,7 +213,7 @@ inline void assemble(Bloom* bloo1, Set* false_positives)
 //					printf("%u ",left_colour_traversal[i]);
 //				}
 //				printf("\n");
-            	kmer_colour_pattern_string(left_colour_traversal, len_left, colour_seq);
+            	KmerColourUtil::kmer_colour_pattern_string(left_colour_traversal, len_left, colour_seq);
 				printf("LeftColour:%s\n",colour_seq);
 				printf("Kmer:%s\n",kmer_seq);
 				printf("KmerColour:%u\n",kmer_colour);
@@ -567,19 +567,13 @@ void test_memory_partitions(int nb_partitions, char solid_kmer_partition_file[][
 
 }
 void test_partitions(int nb_partitions, char solid_kmer_partition_file[][Utils::MaxFileNameLength]){
-	MemoryMonitor::printValue("Partition");
+//	MemoryMonitor::printValue("Partition");
 	STARTWALL(assembly);
 	for (int p=0;p<nb_partitions;p++) {
 //		assemble_partition(solid_kmer_partition_file[p]);
-		Assembler assemble(solid_kmer_partition_file[p], max_memory, 5);
+		Assembler assemble(solid_kmer_partition_file[p], max_memory,0);
 //		Assembler assemble(4);
-		try{
 			assemble.run();
-		}
-		catch(exception& e)
-		  {printf("anything??\n");
-		    cout << e.what() << '\n';
-		}
 		MemoryMonitor::printValue("End each partition");
 		break;
 	}
@@ -603,7 +597,6 @@ printf("Nothing??:\n");
 #endif
 
 	MemoryMonitor::printValue("Init");
-//	exit(-1);
 
 	preprocess_arg(argc, argv);
 
@@ -615,15 +608,14 @@ printf("Nothing??:\n");
 //    char* b = const_cast<char*> (solid_kmers_colour_file);
 //    assemble_partition(b);
 
-	int nb_splits=1;
-//	MemoryMonitor::printValue();
+	int nb_splits=2;
 	char solid_kmer_partition_file[nb_splits][1024];
 
 	Utils::initilise_partition_names(solid_kmer_partition_file, nb_splits);
 
-//	Bank *ReadsTest = new Bank(argv[1]);
-//	SortingCountPartitions::sorting_count_partitions(ReadsTest, solid_kmer_partition_file, max_memory, max_disk_space, nb_splits);
-//	delete ReadsTest;
+	Bank *ReadsTest = new Bank(argv[1]);
+	SortingCountPartitions::sorting_count_partitions(ReadsTest, solid_kmer_partition_file, max_memory, max_disk_space, nb_splits);
+	delete ReadsTest;
 
 //	test_memory_partitions(nb_splits, solid_kmer_partition_file);
 //	test_memory_partitions_using_number_only(nb_splits, solid_kmer_partition_file);

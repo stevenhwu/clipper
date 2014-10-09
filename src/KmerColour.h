@@ -91,7 +91,9 @@ private:
 	std::map<std::pair<KmerColour, int>, int> delta_pattern;
 
 	bool keep = true;
+	std::string report;
 	std::string reason;
+
 
 	char** matrix;
 
@@ -109,27 +111,19 @@ public:
 	~KmerColourSummary();
 	void full_summary();
 
+	void summary(int level);
 
 	void summary_colour_code(std::string &report);
 	void summary_colour_count(std::string &report);
 	void summary_stat(std::string &report);
 	int colour_table(std::string &report);
 
-//	void KmerColourUtil::summary_colour_count(std::string &report,
-//			KmerColour *kmer_colour, int colour_len) {
-//
-//		int *all_colour = (int *) malloc(sizeof(int)*colour_len);
-//	//	int all_colour[colour_len];
-//		get_all_colour_count(kmer_colour, colour_len, all_colour);
-//		report.append("ColourCount:");
-//		for (int i = 0; i < colour_len; ++i) {
-//			report+= std::to_string(all_colour[i]) ;
-//		}
-//		report += "\n";
-//	}
+	void summary_colour_code();
+	void summary_colour_count();
+	void summary_stat();
+	int colour_table();
 
-
-//	all_colour_count(int *all_colour, int error_code = kErrorCode);
+	const char* get_report();
 
 };
 

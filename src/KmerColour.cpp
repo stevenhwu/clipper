@@ -25,7 +25,7 @@
 
 int KmerColourUtil::kmer_colour_pattern_string(KmerColour *colour, int length,
 		char *seq, int error_code) {
-//	printf("Length:%d\n", length);
+	printf("Length:%d\n", length);
 	int valid_length = 0;
 	for (int i = 0; i < length; ++i) {
 		if(colour[i]< error_code){
@@ -36,7 +36,7 @@ int KmerColourUtil::kmer_colour_pattern_string(KmerColour *colour, int length,
 			seq[i] = '#';//change to something later
 		}
 	}
-//	printf("%d %d\n",length, valid_length);
+	printf("%d %d\n",length, valid_length);
 //	if(valid_length < length){
 	seq[length] = '\0';
 //	}
@@ -305,6 +305,15 @@ std::string KmerColourUtil::summary (std::string &report, KmerColour *kmer_colou
 
 }
 
+void KmerColourSummary::summary(int level){
+
+	summary_colour_code();
+	summary_colour_count();
+	summary_stat(report);
+	colour_table();
+
+}
+
 
 int KmerColourN::number_of_colour_n(KmerColour colour) {
 	int count = 0;
@@ -331,6 +340,8 @@ int KmerColourN::number_of_colour_n(KmerColour colour) {
 
 KmerColourSummary::KmerColourSummary(KmerColour *colour, int colour_len, int max_colour):
 		kmer_colour(colour), length(colour_len), max_colour(max_colour) {
+
+	report.append("==========Summary==========\n");
 
 	colour_count.reserve(length);
 	delta_colour_count.reserve(length);
@@ -576,11 +587,15 @@ void KmerColourSummary::summary_stat(std::string &report){
 
 }
 
-
+void KmerColourSummary::summary_colour_code() {
+	summary_colour_code(report);
+}
 void KmerColourSummary::summary_colour_code(std::string &report) {
 	report.append("ColourCode: ").append(colour_code.data()).append("\n");
 }
-
+void KmerColourSummary::summary_colour_count() {
+	summary_colour_count(report);
+}
 void KmerColourSummary::summary_colour_count(std::string &report) {
 	report.append("ColourCount:");
 	for (auto t : colour_count) {
@@ -589,7 +604,9 @@ void KmerColourSummary::summary_colour_count(std::string &report) {
 	report.append("\n");
 }
 
-
+int KmerColourSummary::colour_table(){
+	colour_table(report);
+}
 int KmerColourSummary::colour_table(std::string &report){
 
 //	report.clear();
@@ -627,6 +644,11 @@ int KmerColourSummary::colour_table(std::string &report){
 
 	return 0;
 
+
+}
+
+const char* KmerColourSummary::get_report() {
+	return report.data();
 
 }
 /* TODO:??

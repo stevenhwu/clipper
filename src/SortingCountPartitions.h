@@ -65,7 +65,9 @@ private:
 	static uint save_solid_kmer_colour(OAHashColour* hash,
 			BinaryBankConcurrent* solid_kmers_colour, int tid);
 
+	static void clean_create_temp_folder(char temp_dir[Utils::MaxFileNameLength]);
 
+	static void estimate_max_disk_space(int &max_disk_space, Bank *Sequences);
 };
 
 

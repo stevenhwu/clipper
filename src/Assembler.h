@@ -29,15 +29,18 @@ class Assembler{
 
 private:
 
-	static const uint64_t maxlen=10000000;
+	static const long long maxlen=10000000;
 	const uint kMinContigSize  = 2*sizeKmer+1;
 
 	char *left_traversal;
 	char *right_traversal;
-	char *contig;
+	char *side_traversal;
 
 	KmerColour *left_colour_traversal;
 	KmerColour *right_colour_traversal;
+	KmerColour *side_colour_traversal;
+
+	char *contig;
 	KmerColour *contig_colour;
 
 	FILE * file_assembly;
@@ -53,7 +56,7 @@ private:
 	int debug = 0;
 	//FIXME
 //	uint max_colour_count = Reads->nb_files;
-	uint max_colour_count = 10;
+	uint max_colour_count = 3;
 
 	//deal with these later
     char *assemble_only_one_region = NULL; // debugging, set to a ASCII kmer to activate, NULL to desactivate
@@ -70,6 +73,7 @@ public:
 	Assembler(char *solid_kmer_partition_file, int max_memory, int debug=0);
 	~Assembler();
 
+	void runOLD();
 };
 
 

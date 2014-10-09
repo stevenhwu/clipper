@@ -28,7 +28,6 @@ const unsigned int print_table_frequency = 1000000; //default 10000
 
 // prefix-based output files naming 
 namespace Utils{
-//	int MaxFileNameLength = 1024;
 	char outfile_prefix[MaxFileNameLength];
 
 	void initilise_partition_names(char filenames[][MaxFileNameLength], int nb_splits){

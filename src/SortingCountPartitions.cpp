@@ -44,6 +44,8 @@ void SortingCountPartitions::sorting_count_partitions(Bank *Sequences,
 		read_split->close();
 		delete read_split;
 	}
+	exit(-1);
+
 }
 
 // main k-mer counting function, shared between minia and dsk
@@ -97,41 +99,9 @@ void SortingCountPartitions::sorting_count_partitions_core(Bank *Sequences,
 	verbose = 1;
 //	verbose=2;
 
-	// create a temp dir from the prefix
 	char temp_dir[1024];
-	sprintf(temp_dir, "%s_temp", Utils::outfile_prefix);
-
-	// clear the temp folder (needs to be done before estimating disk space)
-	DIR* dp;
-	struct dirent* ep;
-	char p_buf[512] = { 0 };
-	dp = opendir(temp_dir);
-	while ((dp != NULL) && ((ep = readdir(dp)) != NULL)) {
-		sprintf(p_buf, "%s/%s", temp_dir, ep->d_name);
-		remove(p_buf);
-	}
-	if (dp != NULL)
-		closedir(dp);
-
-	if (max_disk_space == 0) {
-		// default max disk space
-		struct statvfs buffer;
-		char current_path[1000];
-		getcwd(current_path, sizeof(current_path));
-		// int ret =
-		statvfs(current_path, &buffer);
-		uint32_t available = (uint32_t) (((double) buffer.f_bavail
-				* (double) buffer.f_bsize) / 1024.0 / 1024.0);
-		printf("Available disk space in %s: %d MB\n", current_path, available); // not working in osx (is that a TODO then?)
-		uint32_t input_size = max(1,
-				(int) (((double) (Sequences->filesizes)) / 1024.0 / 1024.0));
-		max_disk_space = min(available / 2, input_size);
-		// half of total disk space or input file size, why min?? only make sense if ava<input
-
-		if (max_disk_space == 0) // still 0? for osx
-			max_disk_space = 10000; // = default for osx
-
-	}
+	clean_create_temp_folder(temp_dir);
+	estimate_max_disk_space(max_disk_space, Sequences);
 
 	int nb_threads = 1;
 
@@ -146,8 +116,7 @@ void SortingCountPartitions::sorting_count_partitions_core(Bank *Sequences,
 	uint64_t volume = Sequences->estimate_kmers_volume(sizeKmer);
 	uint32_t nb_passes = 0;
 	uint32_t nb_partitions = 0;
-	estimate_nb_partitions(volume, nb_passes, nb_partitions, max_disk_space,
-			max_memory);
+	estimate_nb_partitions(volume, nb_passes, nb_partitions, max_disk_space, max_memory);
 	uint64_t approximate_file_size = volume / (sizeof(kmer_type) * 4);
 	// is approx size of read file stored in binary, read nb_passes -1 times, without colour
 
@@ -162,12 +131,11 @@ void SortingCountPartitions::sorting_count_partitions_core(Bank *Sequences,
 	BinaryBankConcurrent * redundant_partitions_file[nb_partitions];
 	char redundant_filename[nb_partitions][256];
 	for (uint32_t p = 0; p < nb_partitions; p++) {
-		sprintf(redundant_filename[p], "%s/partition%d.redundant_kmers",
-				temp_dir, p);
+		sprintf(redundant_filename[p], "%s/partition%d.redundant_kmers", temp_dir, p);
 	}
 
 	STARTWALL(count);
-	mkdir(temp_dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+
 
 //    sprintf(solid_kmer_partition_file, "%s_%d", solid_kmer_partition_file, split_index);
 	BinaryBankConcurrent * solid_kmers_colour = new BinaryBankConcurrent(
@@ -182,10 +150,8 @@ void SortingCountPartitions::sorting_count_partitions_core(Bank *Sequences,
 	long distinct_kmers_per_partition[nb_partitions];
 
 	int max_read_length = KMERSBUFFER_MAX_READLEN;
-	kmer_type* kmer_table_seq = (kmer_type *) malloc(
-			sizeof(kmer_type) * max_read_length);
-	KmerColour* kmer_table_col = (KmerColour *) malloc(
-			sizeof(kmer_type) * max_read_length);
+	kmer_type* kmer_table_seq = (kmer_type *) malloc(sizeof(kmer_type) * max_read_length);
+	KmerColour* kmer_table_col = (KmerColour *) malloc(sizeof(kmer_type) * max_read_length);
 
 	initialise_kmer_tables(Sequences, max_read_length, kmer_table_seq,
 			kmer_table_col);
@@ -438,6 +404,11 @@ void SortingCountPartitions::sorting_count_partitions_core(Bank *Sequences,
 
 	} //end pass
 
+	for (uint32_t p = 0; p < nb_partitions; p++) {
+		remove(redundant_filename[p]);
+	}
+	rmdir(temp_dir);
+
 #if !SINGLE_BAR//Default on
 	if (verbose == 0 && nb_threads == 1)
 	progress.finish(); //Needs better way to fix this counter
@@ -465,12 +436,56 @@ void SortingCountPartitions::sorting_count_partitions_core(Bank *Sequences,
 	printf("Saved %lld solid kmers in %s\n", (long long) NbSolid,
 			return_file_name(solid_kmer_partition_file));
 
-	rmdir(temp_dir); //TODO add it back
-
 	STOPWALL(count, "Counted kmers");
 	fprintf(stderr,
 			"------------------ Counted kmers and kept those with abundance >=%i,     \n",
 			min_abundance);
+}
+
+void SortingCountPartitions::clean_create_temp_folder(char temp_dir[Utils::MaxFileNameLength]) {
+
+	// create a temp dir from the prefix
+
+	sprintf(temp_dir, "%s_temp", Utils::outfile_prefix);
+
+	// clear the temp folder (needs to be done before estimating disk space)
+
+	DIR* dp;
+	struct dirent* ep;
+	char p_buf[512] = { 0 };
+	dp = opendir(temp_dir);
+	while ((dp != NULL) && ((ep = readdir(dp)) != NULL)) {
+		sprintf(p_buf, "%s/%s", temp_dir, ep->d_name);
+		remove(p_buf);
+	}
+	if (dp != NULL)
+		closedir(dp);
+
+	mkdir(temp_dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+//	return temp_dir;
+}
+
+void SortingCountPartitions::estimate_max_disk_space(int &max_disk_space, Bank *Sequences){
+
+	if (max_disk_space == 0) {
+		// default max disk space
+		struct statvfs buffer;
+		char current_path[1000];
+		getcwd(current_path, sizeof(current_path));
+		// int ret =
+		statvfs(current_path, &buffer);
+		uint32_t available = (uint32_t) (((double) buffer.f_bavail
+				* (double) buffer.f_bsize) / 1024.0 / 1024.0);
+		printf("Available disk space in %s: %d MB\n", current_path, available); // not working in osx (is that a TODO then?)
+		uint32_t input_size = max(1,
+				(int) (((double) (Sequences->filesizes)) / 1024.0 / 1024.0));
+		max_disk_space = min(available / 2, input_size);
+		// half of total disk space or input file size, why min?? only make sense if ava<input
+		if (max_disk_space == 0) // still 0? for osx
+			max_disk_space = 10000; // = default for osx
+
+	}
+
 }
 
 void SortingCountPartitions::estimate_nb_partitions(uint64_t volume,

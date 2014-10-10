@@ -28,13 +28,15 @@ int SortingCountPartitions::optimism = 1; // optimism == 1 mean that we garantee
 //bool use_hashing = true; // use hashing instead of sorting (better control of memory)
 //bool use_compressed_reads = false;//true;default TRUE // true; // write compressed read file //TODO: change default
 
-void SortingCountPartitions::sorting_count_partitions(Bank *Sequences,
+void SortingCountPartitions::sorting_count_partitions(char *filename,
 		char solid_kmer_partition_file[][Utils::MaxFileNameLength],
 		int max_memory, int max_disk_space, int nb_splits, int verbose) {
 
+	Bank *ReadsTest = new Bank(filename);
+
 	char split_fasta_file[nb_splits][Utils::MaxFileNameLength];
 
-	splitBinaryFile(Sequences, split_fasta_file, nb_splits);
+	splitBinaryFile(ReadsTest, split_fasta_file, nb_splits);
 
 	for (int p = 0; p < nb_splits; ++p) {
 		printf("Process:%s\n", return_file_name(split_fasta_file[p]));
@@ -44,7 +46,8 @@ void SortingCountPartitions::sorting_count_partitions(Bank *Sequences,
 		read_split->close();
 		delete read_split;
 	}
-	exit(-1);
+
+	delete ReadsTest;
 
 }
 
@@ -189,12 +192,11 @@ void SortingCountPartitions::sorting_count_partitions_core(Bank *Sequences,
 		STARTWALL(debpass);
 		STARTWALL(debw);
 		Sequences->rewind_all();
-		// partitioning redundant kmers
+
 		for (uint32_t p = 0; p < nb_partitions; p++) {
 			redundant_partitions_file[p] = new BinaryBankConcurrent(
 					redundant_filename[p], kSizeOfKmerType + kSizeOfKmerColour,
 					true, nb_threads);
-//            redundant_partitions_colour_file[p] =  new BinaryBankConcurrent (redundant_colour_filename[p], kSizeOfKmerColour, true, nb_threads);
 			distinct_kmers_per_partition[p] = 0;
 		}
 

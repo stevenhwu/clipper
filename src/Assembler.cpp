@@ -18,17 +18,27 @@ Assembler::Assembler(char *solid_kmer_partition_file, int max_memory, int debug)
 //}
 //
 //void Assembler::init(){
-	printf("debug:%d\n", debug);
+	if(debug){
+		printf("debug mode:%d\n", debug);
+	}
 //	left_traversal  = (char *) malloc(maxlen*sizeof(char));
 //	right_traversal = (char *) malloc(maxlen*sizeof(char));
 //	left_colour_traversal  = (KmerColour *) malloc(maxlen*sizeof(KmerColour));
 //	right_colour_traversal = (KmerColour *) malloc(maxlen*sizeof(KmerColour));
-
+//	if(debug>3){
+//		MemoryMonitor::printValue("after both side");
+//	}
 	side_traversal  = (char *) malloc(maxlen*sizeof(char));
 	side_colour_traversal  = (KmerColour *) malloc(maxlen*sizeof(KmerColour));
+	if(debug>3){
+		MemoryMonitor::printValue("after side only");
+	}
 
 	contig          = (char *) malloc(2*(maxlen+sizeKmer)*sizeof(char));
 	contig_colour   = (KmerColour *) malloc(2*(maxlen+sizeKmer)*sizeof(KmerColour));
+	if(debug>3){
+		MemoryMonitor::printValue("after contigs");
+	}
 
     char temp_filename[2014];
     sprintf(temp_filename, "%s.%s", solid_kmer_partition_file, assembly_file);
@@ -151,7 +161,7 @@ void Assembler::run(){
 
 			revcomp_sequence(side_traversal,len_left);
 			KmerColourUtil::rev_colour(side_colour_traversal, len_left);
-			strcpy(contig,left_traversal); // contig = revcomp(left_traversal)
+			strcpy(contig,side_traversal); // contig = revcomp(left_traversal)
 			colour_len = KmerColourUtil::append_colour(side_colour_traversal, len_left,
 					contig_colour, colour_len);
 			if (debug > 1) {
@@ -203,26 +213,11 @@ void Assembler::run(){
 			}
 
 			KmerColourSummary kcs(contig_colour, colour_len, 3);
-			kcs.summary(4);
-//			if(debug>0){
+			kcs.summary(1);
+			if(debug>0){
 				printf("%s", kcs.get_report());
-//			}
-//			delete &kcs;
-//			delete &kcs;
-//				std::string report("==========Summary==========\n");
-//				//			KmerColourUtil::summary(report, contig_colour, colour_len);
-//				//			KmerColourUtil::colour_table(report, contig_colour, colour_len, max_colour_count);
-//				//			printf("%s", report.data());
-//
-//							KmerColourSummary kcs(contig_colour, colour_len, max_colour_count);
-//							kcs.summary_colour_code(report);
-//							kcs.summary_colour_count(report);
-//							kcs.summary_stat(report);
-//							kcs.colour_table(report);
-////							if(debug>0){
-//								printf("%s", report.data());
-////							}
-//			printf("================END======================\n\n\n");
+			}
+
 			// save the contig
 			if(contig_len >= kMinContigSize)//TODO: add colour info here
 			{

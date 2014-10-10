@@ -26,7 +26,7 @@ const char *assembly_colour_file = (char *)"contigs_colour.fa";
 const unsigned int print_table_frequency = 1000000; //default 10000
 
 
-// prefix-based output files naming 
+// prefix-based output files naming
 namespace Utils{
 	char outfile_prefix[MaxFileNameLength];
 

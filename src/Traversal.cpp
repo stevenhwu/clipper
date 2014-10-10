@@ -445,6 +445,7 @@ int Traversal::traverse(kmer_type starting_kmer, char* resulting_sequence, int s
 // for MonumentTraversal, either "previous_kmer" is unspecified and then "starting_kmer" is required to be non-branching,
 // or, if starting_kmer is branching, please specify the "previous_kmer" parameter, corresponding to a left k-mer that will
 // be ignored during in-branching checks
+//XXX Traversal::traverse_colour HERE
 int Traversal::traverse_colour(kmer_type starting_kmer, char* resulting_sequence, KmerColour *resulting_colour, int starting_strand, kmer_type previous_kmer)
 {
     kmer_type current_kmer = starting_kmer;
@@ -462,7 +463,8 @@ int Traversal::traverse_colour(kmer_type starting_kmer, char* resulting_sequence
 //    printf(" traversing %llX strand:%d\n",starting_kmer,current_strand);
 
 //    while( (nnt=avance(current_kmer, current_strand, len_extension == 0, newNT, previous_kmer)))
-    while( (nnt=avance_colour(current_kmer, current_strand, len_extension == 0, newNT, new_colour, previous_kmer)))
+	while ((nnt = avance_colour(current_kmer, current_strand,
+			len_extension == 0, newNT, new_colour, previous_kmer)))
 //    while( (nnt=avance_colour(current_kmer, current_strand, len_extension == 0, newNT, new_kmer, new_colour, previous_kmer)))
     {
 //    	printf("From avance_colour:nnt:%d\n",nnt);
@@ -651,8 +653,8 @@ int Traversal::simple_paths_avance(kmer_type kmer, int strand, bool first_extens
 
 
 //int Traversal::simple_paths_avance_colour(kmer_type kmer, int strand, bool first_extension, char * newNT, kmer_type *new_kmer, KmerColour * new_colour)
-int Traversal::simple_paths_avance_colour(kmer_type kmer, int strand, bool first_extension, char * newNT, KmerColour * new_colour)
-{
+int Traversal::simple_paths_avance_colour(kmer_type kmer, int strand,
+		bool first_extension, char * newNT, KmerColour * new_colour) {
 
 
     int nb_extensions = 0, in_branching_degree = 0;
@@ -1222,9 +1224,10 @@ bool MonumentTraversal::all_consensuses_almost_identical(set<string> consensuses
     return true;
 }
 
-bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start_strand,
-		char *consensus, KmerColour *new_colour, int &consensus_length, kmer_type previous_kmer, set<kmer_type> *all_involved_extensions)
-{
+bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer,
+		int start_strand, char *consensus, KmerColour *new_colour,
+		int &consensus_length, kmer_type previous_kmer,
+		set<kmer_type> *all_involved_extensions) {
 	int debug= 0;
     kmer_type end_kmer;
     int end_strand;
@@ -1256,48 +1259,23 @@ bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start
 		printf("start:%s, end:%s\n", kmer_seq1, kmer_seq2);
     }
 
-    consensuses = all_consensuses_between(start_kmer, start_strand, end_kmer, end_strand, traversal_depth+1, success);
-
+	consensuses = all_consensuses_between(start_kmer, start_strand, end_kmer,
+			end_strand, traversal_depth + 1, success);
+//	printf("\nS:%d\n",success);
+//	if(consensuses.size() ==1){
+//		set<string>::iterator c0 = consensuses.begin();
+//
+////		const std::basic_string<char, std::char_traits<char>,
+////				std::allocator<char> > c0a = *c0;
+//
+//		string s = *c0;
+//		printf("\nS:%d\n1:%s\n2:%s\n", success, s.c_str(), consensus);
+//    }
     if(debug){
 		printf("success:%u\n", success);
 		for(auto s: consensuses){
 			printf("Consensuses:%s\n", s.data() );
 		}
-    }
-
-
-    if(consensuses.size() ==1){
-		set<string>::iterator c0 = consensuses.begin();
-//		const std::basic_string<char, std::char_traits<char>,
-//				std::allocator<char> > c0a = *c0;
-
-		string s = *c0;
-
-//		printf("test:%d\n",s.length() );
-		kmer_type new_graine = start_kmer;
-		for (size_t i = 0; i < s.length(); ++i) {
-			char c = s[i];
-			int nt2int = NT2int(c);
-			int new_strand = start_strand;
-			new_graine = next_kmer(new_graine, nt2int ,&new_strand);
-			kmer_type rev = revcomp(new_graine);
-			char kmer_seq[30];
-			code2seq(rev, kmer_seq);
-			new_colour[i] = GetColour(new_graine);
-//			printf("char:%c %d %s %u %s %lu %lu\n",  c, nt2int, print_kmer(new_graine),  new_colour[i], kmer_seq,  new_graine, rev);
-		}
-    }
-    else{
-    	bool validated = validate_consensuses(consensuses, consensus, consensus_length);
-//    	printf("FAIL!! Not yet implemented:%d %d %d\t", success, validated, consensuses.size());
-//    	printf("Double check colours!!")//TODO
-    	for(set<string>::iterator c0 = consensuses.begin(); c0 != consensuses.end(); c0++) {
-    	   string element = *c0;
-//    	   printf("%s\n",element.data());
-    	}//TODO, should be easy, just use consensus instead of consensuses(SETS). Testing required
-//    	printf("\n");
-
-
     }
     // if consensus phase failed, stop
     if (!success)
@@ -1308,6 +1286,83 @@ bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start
 //	printf("Consensus:%s\n", consensus);
     if (!validated)
         return false;
+
+
+//    if(consensuses.size() ==1){
+//		set<string>::iterator c0 = consensuses.begin();
+
+//		const std::basic_string<char, std::char_traits<char>,
+//				std::allocator<char> > c0a = *c0;
+
+//		string s = *c0;
+		string s(consensus, consensus_length);
+//		printf("3:%s\n4:%s\n%d\t%zu\t%zu\t%zu\n========\n",
+//				s.c_str(), s2.c_str(), consensus_length,
+//				sizeof(consensus),
+//				(sizeof(consensus) / sizeof(char)),
+//				(sizeof(consensus) / sizeof(*consensus)) );
+//		printf("test:%d\n",s.length() );
+		kmer_type new_graine = start_kmer;
+		int new_strand = start_strand;
+		for (size_t i = 0; i < s.length(); ++i) {
+//			char c = s[i];
+			int nt2int = NT2int(s[i]);
+//			current_kmer = next_kmer(current_kmer,NT2int(newNT[cur_nt]),&current_strand);
+			new_graine = next_kmer(new_graine, nt2int ,&new_strand);
+//			kmer_type rev = revcomp(new_graine);
+//			char kmer_seq[30];
+//			code2seq(rev, kmer_seq);
+			new_colour[i] = GetColour(new_graine);
+//			printf("char:%c %d %s %u %s %lu %lu\n",  c, nt2int, print_kmer(new_graine),  new_colour[i], kmer_seq,  new_graine, rev);
+		}
+		char col_seq[consensus_length];
+		KmerColourUtil::kmer_colour_pattern_string(new_colour, consensus_length, col_seq);
+		printf("C1:%s\n", col_seq);
+
+		new_graine = start_kmer;
+		for (size_t i = 0; i < s.length(); ++i) {
+		//			char c = s[i];
+					int nt2int = NT2int(s[i]);
+		//			current_kmer = next_kmer(current_kmer,NT2int(newNT[cur_nt]),&current_strand);
+					int new_strand = start_strand;
+					new_graine = next_kmer(new_graine, nt2int ,&new_strand);
+		//			kmer_type rev = revcomp(new_graine);
+		//			char kmer_seq[30];
+		//			code2seq(rev, kmer_seq);
+					new_colour[i] = GetColour(new_graine);
+		//			printf("char:%c %d %s %u %s %lu %lu\n",  c, nt2int, print_kmer(new_graine),  new_colour[i], kmer_seq,  new_graine, rev);
+				}
+		KmerColourUtil::kmer_colour_pattern_string(new_colour, consensus_length, col_seq);
+		printf("C2:%s\n", col_seq);
+
+//    }
+//    else{
+//		string s2(consensus, consensus_length);
+//
+////    	bool validated = validate_consensuses(consensuses, consensus, consensus_length);
+//    	printf("FAIL!! Not yet implemented:%d %d %d\t", success, validated, consensuses.size());
+
+//    	string s(consensus, consensus_length);
+//		kmer_type new_graine = start_kmer;
+//		for (size_t i = 0; i < s.length(); ++i) {
+//			char c = s[i];
+//			int nt2int = NT2int(c);
+//			int new_strand = start_strand;
+//			new_graine = next_kmer(new_graine, nt2int ,&new_strand);
+////			kmer_type rev = revcomp(new_graine);
+////			char kmer_seq[30];
+////			code2seq(rev, kmer_seq);
+//			new_colour[i] = GetColour(new_graine);
+////			printf("char:%c %d %s %u %s %lu %lu\n",  c, nt2int, print_kmer(new_graine),  new_colour[i], kmer_seq,  new_graine, rev);
+////		}
+//		if( consensuses.size() >1){
+//    	revcomp_sequence(consensus,consensus_length);
+//    	string s2(consensus, consensus_length);
+//		char col_seq[consensus_length];
+//		KmerColourUtil::kmer_colour_pattern_string(new_colour, consensus_length, col_seq);
+//		printf("Count:%d\nS:%s\nS2:%s\n",consensuses.size(), s.data(), s2.data());
+//		printf("C:%s\n", col_seq);
+//    }
 
 
 
@@ -1321,12 +1376,15 @@ bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start
 
 // similar to Monument's extension_graph.py:explore_branching
 // return true if the branching can be traversed, and mark all involved nodes
-bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer, int start_strand, char *consensus, KmerColour *kmer_colour, int &consensus_length, kmer_type previous_kmer)
-{
-    set<kmer_type> *all_involved_extensions = new set<kmer_type>;
-    bool res = explore_branching_colour(start_kmer, start_strand, consensus, kmer_colour, consensus_length, previous_kmer, all_involved_extensions);
-    delete all_involved_extensions;
-    return res;
+bool MonumentTraversal::explore_branching_colour(kmer_type start_kmer,
+		int start_strand, char *consensus, KmerColour *kmer_colour,
+		int &consensus_length, kmer_type previous_kmer) {
+	set<kmer_type> *all_involved_extensions = new set<kmer_type>;
+	bool res = explore_branching_colour(start_kmer, start_strand, consensus,
+			kmer_colour, consensus_length, previous_kmer,
+			all_involved_extensions);
+	delete all_involved_extensions;
+	return res;
 }
 
 bool MonumentTraversal::explore_branching(kmer_type start_kmer, int start_strand,
@@ -1402,8 +1460,9 @@ char MonumentTraversal::avance(kmer_type kmer, int current_strand, bool first_ex
 
 //XXX avance_colour HERE
 //char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand, bool first_extension, char * newNT, kmer_type *new_kmer, KmerColour * newColour, kmer_type previous_kmer)
-char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand, bool first_extension, char * newNT, KmerColour * new_colour, kmer_type previous_kmer)
-{
+char MonumentTraversal::avance_colour(kmer_type kmer, int current_strand,
+		bool first_extension, char * newNT, KmerColour * new_colour,
+		kmer_type previous_kmer) {
 	int debug= 0;
     // if we're on a simple path, just traverse it
     int is_simple_path = simple_paths_avance_colour(kmer, current_strand, first_extension, newNT, new_colour);

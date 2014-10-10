@@ -25,7 +25,7 @@
 
 int KmerColourUtil::kmer_colour_pattern_string(KmerColour *colour, int length,
 		char *seq, int error_code) {
-	printf("Length:%d\n", length);
+//	printf("Length:%d\n", length);
 	int valid_length = 0;
 	for (int i = 0; i < length; ++i) {
 		if(colour[i]< error_code){
@@ -36,7 +36,7 @@ int KmerColourUtil::kmer_colour_pattern_string(KmerColour *colour, int length,
 			seq[i] = '#';//change to something later
 		}
 	}
-	printf("%d %d\n",length, valid_length);
+//	printf("%d %d\n",length, valid_length);
 //	if(valid_length < length){
 	seq[length] = '\0';
 //	}
@@ -307,11 +307,14 @@ std::string KmerColourUtil::summary (std::string &report, KmerColour *kmer_colou
 
 void KmerColourSummary::summary(int level){
 
-	summary_colour_code();
-	summary_colour_count();
-	summary_stat(report);
-	colour_table();
-
+	if(level>0){
+		summary_colour_code();
+	}
+	if(level>3){
+		summary_colour_count();
+		summary_stat(report);
+		colour_table();
+	}
 }
 
 

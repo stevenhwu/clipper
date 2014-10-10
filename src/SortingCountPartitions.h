@@ -35,7 +35,7 @@ class SortingCountPartitions {
 
 public:
 
-	static void sorting_count_partitions(Bank *Sequences,
+	static void sorting_count_partitions(char *filename,
 			char solid_kmer_partition_file[][Utils::MaxFileNameLength],
 			int max_memory, int max_disk_space, int nb_splits,int verbose=0);
 

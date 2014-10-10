@@ -32,12 +32,13 @@ private:
 	static const long long maxlen=10000000;
 	const uint kMinContigSize  = 2*sizeKmer+1;
 
-	char *left_traversal;
-	char *right_traversal;
+//	char *left_traversal;
+//	char *right_traversal;
+//	KmerColour *left_colour_traversal;
+//	KmerColour *right_colour_traversal;
+
 	char *side_traversal;
 
-	KmerColour *left_colour_traversal;
-	KmerColour *right_colour_traversal;
 	KmerColour *side_colour_traversal;
 
 	char *contig;

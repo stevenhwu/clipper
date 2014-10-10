@@ -600,29 +600,21 @@ printf("Nothing??:\n");
 
 	preprocess_arg(argc, argv);
 
-//    max_memory = 1000;
-//    max_disk_space = 10;
-//    BinaryBank solid_kmers_colour (return_file_name(solid_kmers_colour_file), kSizeOfKmerType+kSizeOfKmerColour, 0);
-//    off_t nbElements = solid_kmers_colour.nb_elements();
-//
-//    char* b = const_cast<char*> (solid_kmers_colour_file);
-//    assemble_partition(b);
+    max_memory = 500;
+    max_disk_space = 1000;
 
-	int nb_splits=2;
+	int nb_splits=1;
 	char solid_kmer_partition_file[nb_splits][1024];
-
 	Utils::initilise_partition_names(solid_kmer_partition_file, nb_splits);
 
-	Bank *ReadsTest = new Bank(argv[1]);
-	SortingCountPartitions::sorting_count_partitions(ReadsTest, solid_kmer_partition_file, max_memory, max_disk_space, nb_splits);
-	delete ReadsTest;
+//	SortingCountPartitions::sorting_count_partitions(argv[1],
+//			solid_kmer_partition_file, max_memory, max_disk_space, nb_splits);
 
 //	test_memory_partitions(nb_splits, solid_kmer_partition_file);
 //	test_memory_partitions_using_number_only(nb_splits, solid_kmer_partition_file);
 
 	test_partitions(nb_splits, solid_kmer_partition_file);
-//
-//exit(-1);
+
 //	bool divide_kmers = false;
 //		if(divide_kmers){
 //			divided_solid_kmer_colour_into_partitions(nb_splits, solid_kmer_partition_file);

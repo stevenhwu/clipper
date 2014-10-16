@@ -616,8 +616,8 @@ printf("Nothing??:\n");
 	char solid_kmer_partition_file[nb_splits][1024];
 	Utils::initilise_partition_names(solid_kmer_partition_file, nb_splits);
 
-//	SortingCountPartitions::sorting_count_partitions(argv[1],
-//			solid_kmer_partition_file, max_memory, max_disk_space, nb_splits);
+	SortingCountPartitions::sorting_count_partitions(argv[1],
+			solid_kmer_partition_file, max_memory, max_disk_space, nb_splits);
 
 //	test_memory_partitions(nb_splits, solid_kmer_partition_file);
 //	test_memory_partitions_using_number_only(nb_splits, solid_kmer_partition_file);

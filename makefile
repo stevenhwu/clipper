@@ -10,7 +10,7 @@ CFLAGS = -O3 -D_FILE_OFFSET_BITS=64 -std=c++11 -stdlib=libstdc++ #-I/usr/include
 
 ifeq ($(UNAME), FreeBSD)
 CC=g++48
-CFLAGS += -D_GLIBCXX_USE_C99
+CFLAGS = -O3 -Wall -D_FILE_OFFSET_BITS=64 -std=c++11 -D_GLIBCXX_USE_C99
 #LDFLAGS= -L/usr/local/lib/gcc48/
 LDFLAGS += -Wl,-rpath,/usr/local/lib/gcc48
 endif

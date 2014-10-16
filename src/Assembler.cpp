@@ -152,7 +152,9 @@ void Assembler::run(){
 		kmer_type starting_kmer;
 		while (traversal->find_starting_kmer(kmer, starting_kmer)) {
 			int colour_len = 0;
+			code2seq(starting_kmer,kmer_seq);
 			KmerColour sep_colour = kErrorCode+1;// output with %x, so anything greater than 100;
+
 			KmerColour kmer_colour = traversal->GetColour(starting_kmer);
 
 			len_left = traversal->traverse_colour(starting_kmer, side_traversal,

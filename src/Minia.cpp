@@ -37,7 +37,6 @@ using namespace std;
 #include "Assembler.h"
 
 
-int max_memory; // the most memory one should alloc at any time, in MB
 int order = 0; // deblooming order; 0 = debloom everything; 1 = don't debloom 1-node tips (experimental, untested, shouldn't work);// (made extern int in Traversal.h)
 //ALWAYS 0 NOW!!
 
@@ -47,9 +46,10 @@ bool FOUR_BLOOM_VERSION = true;
 int START_FROM_SOLID_KMERS=0; // if = 0, construct the fasta file of solid kmers, if = 1, start directly from that file
 int LOAD_FALSE_POSITIVE_KMERS=0; // if = 0, construct the fasta file of false positive kmers (debloom), if = 1, load that file into the hashtable
 int NO_FALSE_POSITIVES_AT_ALL=0; // if = 0, normal behavior, if = 1, don't load false positives (will be a probabilistic de bruijn graph)
-int max_disk_space = 0;// let dsk decide
 
-int max_colour_count;
+int max_memory = 0; // the most memory one should alloc at any time, in MB
+int max_disk_space = 0;// let dsk decide
+int max_colour_count = 0;
 
 inline void assemble(Bloom* bloo1, Set* false_positives)
 {
@@ -369,24 +369,89 @@ void divided_solid_kmer_colour_into_partitions(int nb_partitions, char solid_kme
 	printf("Total:%d\t%d\t%d\t%d\n",total, total2, total_sub, total/10*9*nb_partitions);
 }
 
-int preprocess_arg(int argc, char *argv[]){
+int old_minia(int argc, char *argv[]){
 
-    if(argc <  6)
+    START_FROM_SOLID_KMERS = 0; //TODO change back to 0 later
+    LOAD_FALSE_POSITIVE_KMERS =0; //TODO: change back to 0 later
+    NO_FALSE_POSITIVES_AT_ALL = 0;//TODO: change back to 0 later
+    STARTWALL(0);
+printf("argv[1]:%s\n", argv[1]);
+    Bank *Reads = new Bank(argv[1]);
+
+    // counter kmers, write solid kmers to disk
+    if (!START_FROM_SOLID_KMERS)
+    {
+        int verbose = 1; //default 0
+        bool write_count = false; //default false
+        bool skip_binary_conversion = false; //default false
+printf("==========START_FROM_SOLID_KMERS\n");
+		sorting_count(Reads, Utils::outfile_prefix, max_memory, max_disk_space, write_count,
+				verbose, skip_binary_conversion);
+	}
+
+    max_colour_count = Reads->nb_files;
+
+    // debloom, write false positives to disk, insert them into false_positives
+
+    if (! LOAD_FALSE_POSITIVE_KMERS)
+    {
+    	printf("==========LOAD_FALSE_+ve_KMERS\n");//Don't think we need to add colour to this section, double check LATER
+        debloom(order, max_memory);
+    }
+
+
+	int LOAD_BLOOM_FROM_DUMP = 0;
+    if(!LOAD_BLOOM_FROM_DUMP){} //TODO later
+    Bloom* bloo1 = bloom_create_bloo1((BloomCpt *)NULL, false);
+
+    Set* false_positives;
+    FOUR_BLOOM_VERSION = 1;//Save memory
+	if (!NO_FALSE_POSITIVES_AT_ALL) { //TODO: deal with this later, use dummy_false_positivies()
+		printf("===============!NO_FALSE_+ve_KMERS\n");
+		// load false positives from disk into false_positives
+		if (!FOUR_BLOOM_VERSION){
+			printf("===============NoFourBloom\n");
+			false_positives = load_false_positives();//Memory: nb_fp * 64 bits
+		}
+		else{
+			printf("===============FourBloomVersion\n");
+			false_positives = load_false_positives_cascading4();
+		}
+	} else {
+		printf("=============else NO_FALSE_+ve_KMERS: titus mode: no FP's\n");
+		// titus mode: no FP's
+		false_positives = dummy_false_positives();
+	}
+	assemble(bloo1, false_positives);
+
+    STOPWALL(0,"Total");
+
+    delete Reads;
+    return 0;
+}
+
+
+
+
+int preprocess_arg(int argc, char *argv[], int &nb_splits){
+
+    if(argc <  7)
     {
         fprintf (stderr,"usage:\n");
-        fprintf (stderr," %s fasta_file kmer_size min_abundance estimated_genome_size prefix\n",argv[0]);
+        fprintf (stderr," %s fasta_file kmer_size min_abundance estimated_genome_size prefix nb_of_splits\n",argv[0]);
         fprintf (stderr,"hints:\n min_abundance ~ 3\n estimated_genome_size is in bp, does not need to be accurate, only controls memory usage\n prefix is any name you want the results to start with\n");
-
+        fprintf (stderr,"Default nb_of_spilts = 1, higher should reduce memory usage\n");
+        fprintf (stderr,"Additional switches:\n\t-d\tMax_disk_space\n");
         return 1;
     }
 
-    bool FOUR_BLOOM_VERSION = true;
+//    bool FOUR_BLOOM_VERSION = true;
+//
+//     // shortcuts to go directly to assembly using serialized bloom and serialized hash
+//    int START_FROM_SOLID_KMERS=0; // if = 0, construct the fasta file of solid kmers, if = 1, start directly from that file
+//    int LOAD_FALSE_POSITIVE_KMERS=0; // if = 0, construct the fasta file of false positive kmers (debloom), if = 1, load that file into the hashtable
+//    int NO_FALSE_POSITIVES_AT_ALL=0; // if = 0, normal behavior, if = 1, don't load false positives (will be a probabilistic de bruijn graph)
 
-     // shortcuts to go directly to assembly using serialized bloom and serialized hash
-    int START_FROM_SOLID_KMERS=0; // if = 0, construct the fasta file of solid kmers, if = 1, start directly from that file
-    int LOAD_FALSE_POSITIVE_KMERS=0; // if = 0, construct the fasta file of false positive kmers (debloom), if = 1, load that file into the hashtable
-    int NO_FALSE_POSITIVES_AT_ALL=0; // if = 0, normal behavior, if = 1, don't load false positives (will be a probabilistic de bruijn graph)
-    int max_disk_space = 0;// let dsk decide
     for (int n_a = 6; n_a < argc ; n_a++)
     {
         if (strcmp(argv[n_a],"--original") == 0)
@@ -484,73 +549,13 @@ int preprocess_arg(int argc, char *argv[]){
     {
         strcpy(Utils::outfile_prefix,argv[5]);
     }
-    return 0;
 
-}
-
-int old_minia(int argc, char *argv[]){
-
-    START_FROM_SOLID_KMERS = 0; //TODO change back to 0 later
-    LOAD_FALSE_POSITIVE_KMERS =0; //TODO: change back to 0 later
-    NO_FALSE_POSITIVES_AT_ALL = 0;//TODO: change back to 0 later
-    STARTWALL(0);
-printf("argv[1]:%s\n", argv[1]);
-    Bank *Reads = new Bank(argv[1]);
-
-    // counter kmers, write solid kmers to disk
-    if (!START_FROM_SOLID_KMERS)
-    {
-        int verbose = 1; //default 0
-        bool write_count = false; //default false
-        bool skip_binary_conversion = false; //default false
-printf("==========START_FROM_SOLID_KMERS\n");
-		sorting_count(Reads, Utils::outfile_prefix, max_memory, max_disk_space, write_count,
-				verbose, skip_binary_conversion);
-	}
-
-    max_colour_count = Reads->nb_files;
-
-    // debloom, write false positives to disk, insert them into false_positives
-
-    if (! LOAD_FALSE_POSITIVE_KMERS)
-    {
-    	printf("==========LOAD_FALSE_+ve_KMERS\n");//Don't think we need to add colour to this section, double check LATER
-        debloom(order, max_memory);
+    if(argc >= 7){
+    	nb_splits = atoll(argv[6]);
     }
-
-
-	int LOAD_BLOOM_FROM_DUMP = 0;
-    if(!LOAD_BLOOM_FROM_DUMP){} //TODO later
-    Bloom* bloo1 = bloom_create_bloo1((BloomCpt *)NULL, false);
-
-    Set* false_positives;
-    FOUR_BLOOM_VERSION = 1;//Save memory
-	if (!NO_FALSE_POSITIVES_AT_ALL) { //TODO: deal with this later, use dummy_false_positivies()
-		printf("===============!NO_FALSE_+ve_KMERS\n");
-		// load false positives from disk into false_positives
-		if (!FOUR_BLOOM_VERSION){
-			printf("===============NoFourBloom\n");
-			false_positives = load_false_positives();//Memory: nb_fp * 64 bits
-		}
-		else{
-			printf("===============FourBloomVersion\n");
-			false_positives = load_false_positives_cascading4();
-		}
-	} else {
-		printf("=============else NO_FALSE_+ve_KMERS: titus mode: no FP's\n");
-		// titus mode: no FP's
-		false_positives = dummy_false_positives();
-	}
-	assemble(bloo1, false_positives);
-
-    STOPWALL(0,"Total");
-
-    delete Reads;
     return 0;
+
 }
-
-
-
 
 void test_memory_partitions(int nb_partitions, char solid_kmer_partition_file[][Utils::MaxFileNameLength]){
 //	long long maxlen=10000000;
@@ -574,11 +579,11 @@ void test_partitions(int nb_partitions, char solid_kmer_partition_file[][Utils::
 		Assembler assemble(solid_kmer_partition_file[p], max_memory,0);
 //		Assembler assemble(4);
 			assemble.run();
-		MemoryMonitor::printValue("End each partition");
-		break;
+//		MemoryMonitor::printValue("End each partition");
+//		break;
 	}
 	STOPWALL(assembly, "Assembly");
-	MemoryMonitor::printValue("End Partition");
+//	MemoryMonitor::printValue("End Partition");
 }
 
 
@@ -596,14 +601,18 @@ printf("Some unix/apple");
 printf("Nothing??:\n");
 #endif
 
-	MemoryMonitor::printValue("Init");
+//	MemoryMonitor::printValue("Init");
 
-	preprocess_arg(argc, argv);
+	int nb_splits = 1;
+	int code = preprocess_arg(argc, argv, nb_splits);
+	if(code > 0){
+		return code;
+	}
 
-    max_memory = 500;
-    max_disk_space = 1000;
+//    max_memory = 500;
+//    max_disk_space = 1000;
 
-	int nb_splits=1;
+
 	char solid_kmer_partition_file[nb_splits][1024];
 	Utils::initilise_partition_names(solid_kmer_partition_file, nb_splits);
 
@@ -619,7 +628,7 @@ printf("Nothing??:\n");
 //		if(divide_kmers){
 //			divided_solid_kmer_colour_into_partitions(nb_splits, solid_kmer_partition_file);
 //	}
-exit(-1);
-	old_minia(argc, argv);
+//exit(-1);
+//	old_minia(argc, argv);
 	return 0;
 }

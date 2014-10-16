@@ -1,8 +1,12 @@
 UNAME := $(shell uname)
 
 CC=g++
-CFLAGS = -O4 -Wall -D_FILE_OFFSET_BITS=64 -std=c++11# needed to handle files > 2 GB on 32 bits systems
+CFLAGS = -O3 -Wall -D_FILE_OFFSET_BITS=64 -std=c++11 # needed to handle files > 2 GB on 32 bits systems
 LDFLAGS = -lz
+
+
+CC=clang++
+CFLAGS = -O3 -D_FILE_OFFSET_BITS=64 -std=c++11 -stdlib=libstdc++ #-I/usr/include/c++/4.8.3/ -I/usr/include/c++/4.8.3/x86_64-redhat-linux/
 
 ifeq ($(UNAME), FreeBSD)
 CC=g++48
@@ -122,17 +126,17 @@ $(OBJDIR):
 obj/%.o: src/%.cpp src/%.h test/%.cpp
 	echo "BOTH!!"
 	@$(call make-depend,$<,$@,$(subst .o,.d,$@))
-	$(CC) -o $@ -c $< $(CFLAGS) $(LDFLAGS)
+	$(CC) -o $@ -c $< $(CFLAGS) 
 
 obj/%.o: src/%.cpp src/%.h
 #	echo "SRC ONLY" 
 	@$(call make-depend,$<,$@,$(subst .o,.d,$@))
-	$(CC)  -o $@ -c $< $(CFLAGS) $(LDFLAGS)
+	$(CC)  -o $@ -c $< $(CFLAGS) 
 
 obj/%.o: test/%.cpp
 #	echo "TEST ONLY"
 	@$(call make-depend,$<,$@,$(subst .o,.d,$@))
-	$(CC) -o $@ -c $< $(CFLAGS) $(LDFLAGS)  -I$(CURDIR)/
+	$(CC) -o $@ -c $< $(CFLAGS)   -I$(CURDIR)/
 
 
 #%Test.o: clean %Test.cpp $(SRP)%.cpp $(SRP)%.h
